@@ -3,7 +3,7 @@
 <#
     EAS OAuth Mailbox - automated tests (Pester 6.1 or later).
     Author  : Nicolas Fabert
-    Version : 1.2.0
+    Version : 1.2.1
 
     Run:  .\Run-Tests.ps1      (or Invoke-Pester -Path .\tests -Output Detailed)
 
@@ -485,6 +485,42 @@ Describe 'Scenarios against a simulated Exchange' {
         $script:Exchange.CertificateDays = 10
         $r = Invoke-Scenario 'Discovery' -Token ''
         $r.Status | Should -Be 'Warning'
+    }
+
+    It 'Discovery: a TLS handshake closed before the certificate is a network failure, not an untrusted certificate' {
+        Mock -ModuleName EasOAuthMailbox Get-EomTlsCertificate {
+            [pscustomobject]@{ HostName = $HostName; Port = $Port; Reachable = $true; Valid = $false; Interrupted = $true; Subject = $null; Issuer = $null; NotAfterUtc = $null; DaysLeft = $null; Protocol = $null; Error = 'An existing connection was forcibly closed by the remote host.' }
+        }
+        $r = Invoke-Scenario 'Discovery' -Token ''
+        $step = @($r.Steps | Where-Object Name -like 'TLS certificate*')[0]
+        $step.Status | Should -Be 'Failed'
+        $step.Message | Should -Match 'handshake interrupted'
+        $step.Message | Should -Match 'certificate is not in question'
+        $step.Message | Should -Not -Match 'not trusted'
+    }
+
+    It 'Discovery: a certificate received and rejected is still reported as not trusted' {
+        Mock -ModuleName EasOAuthMailbox Get-EomTlsCertificate {
+            [pscustomobject]@{ HostName = $HostName; Port = $Port; Reachable = $true; Valid = $false; Interrupted = $false; Subject = $null; Issuer = $null; NotAfterUtc = $null; DaysLeft = $null; Protocol = $null; Error = 'The remote certificate is invalid: RemoteCertificateChainErrors (UntrustedRoot)' }
+        }
+        $r = Invoke-Scenario 'Discovery' -Token ''
+        $step = @($r.Steps | Where-Object Name -like 'TLS certificate*')[0]
+        $step.Status | Should -Be 'Failed'
+        $step.Message | Should -Match 'not trusted by this computer.*UntrustedRoot'
+    }
+
+    It 'a connection reset during the TLS handshake gives the socket reason, not the PowerShell wrapper' {
+        Mock -ModuleName EasOAuthMailbox Send-EomHttpRequest {
+            $socket = [Net.Sockets.SocketException]::new(10054)
+            $io = [IO.IOException]::new('Unable to read data from the transport connection.', $socket)
+            $http = [Net.Http.HttpRequestException]::new('The SSL connection could not be established, see inner exception.', $io)
+            throw [Management.Automation.MethodInvocationException]::new('Exception calling "GetResult" with "0" argument(s): "The SSL connection could not be established, see inner exception."', $http)
+        }
+        $r = Invoke-Scenario 'Discovery' -Token ''
+        $step = $r.Steps | Where-Object Name -eq 'OAuth challenge'
+        $step.Status | Should -Be 'Failed'
+        $step.Message | Should -BeLike "ActiveSync not reachable: The SSL connection could not be established: $([Net.Sockets.SocketException]::new(10054).Message)*"
+        $step.Message | Should -Not -Match 'GetResult|see inner exception'
     }
 
     It 'an expired token fails and the following stages are skipped, not run' {

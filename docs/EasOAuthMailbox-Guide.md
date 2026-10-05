@@ -1,7 +1,7 @@
 ---
 title: EAS OAuth Mailbox
 subtitle: Administrator guide
-version: 1.2.0
+version: 1.2.1
 author: Nicolas Fabert
 updated: 2026-10-05
 ---
@@ -424,7 +424,7 @@ The same package runs from Windows Server 2016 to 2025 and on Windows 10 and 11.
 > Replace the example path with the folder where you downloaded or extracted this project.
 
 ```steps
-Copy the package | Copy the `EasOAuthMailbox-1.2.0` folder, for example to `C:\Tools\EasOAuthMailbox`. No installer, no module to register.
+Copy the package | Copy the `EasOAuthMailbox-1.2.1` folder, for example to `C:\Tools\EasOAuthMailbox`. No installer, no module to register.
 Check PowerShell | `pwsh -NoProfile -Command '$PSVersionTable.PSVersion'` shows 7.4 or later.
 Configure | Edit `config\EasOAuthMailbox.config.psd1` (chapter 11): every error is listed at once on start.
 First tests | `-TestType Discovery` (no account), then `-TestType Endpoint` (sign-in), then `-TestType Full -AcknowledgePolicy` on the test mailbox.
@@ -538,7 +538,7 @@ chart | Progress | One line per check with the icon of its status, as in the rep
 | Check | Request | Passed | Warning | Failed |
 |---|---|---|---|---|
 | AD FS metadata · Entra ID tenant · User realm | `openid-configuration`, user realm | Server found (chapters 6.3, 7.3) | Not readable · unknown domain | Unknown tenant |
-| TLS certificate | Direct TLS connection | Trusted, expiry beyond `CertificateWarningDays` | No direct connection (proxy), close expiry | Not trusted by the workstation |
+| TLS certificate | Direct TLS connection | Trusted, expiry beyond `CertificateWarningDays` | No direct connection (proxy), close expiry | Not trusted by the workstation; handshake interrupted before the certificate (network) |
 | OAuth challenge | Anonymous `OPTIONS`, then empty `Authorization: Bearer` | `401` with `WWW-Authenticate: Bearer`, naming the expected server | No `Bearer` challenge, **another** server, `451`, anonymous `200`, another code (HTTP 500 while Exchange starts): *OAuth for the mailbox* and the sign-in decide | — |
 | OAuth for the mailbox | Same, with `X-User-Identity` = the mailbox | The expected server is named for the mailbox | Another server; no URL; `451` | `oauth_not_available`: policy or domain |
 | Tenant trusted by Exchange | (from the challenge) | Tenant in `trusted_issuers`, or every tenant (`@*`, Exchange Online) | Another tenant only | — |
@@ -765,6 +765,7 @@ Package | `.\tools\New-EasOAuthMailboxPackage.ps1` rebuilds the guide and copies
 |---|---|
 | `Target.AdfsUrl must end with /adfs` (and other configuration messages) | The value named; every error is listed at once. |
 | *TLS certificate*: *No direct TLS connection* · *not trusted* | Normal behind a proxy, otherwise DNS or firewall · chain not trusted, name missing, expired. |
+| *TLS certificate*: *TLS handshake interrupted* (and *The SSL connection could not be established* on the HTTP checks) | Not the certificate: the connection is closed before the server sends it. A firewall or NSG that filters the source address, a reverse proxy, or a VPN or Global Secure Access client that tunnels the address of the server (then the server sees the egress address of the tunnel, not the one of the workstation). Test from another network or from a server next to Exchange. |
 | *OAuth challenge*: HTTP 451 | Exchange redirects the mailbox to another ActiveSync URL (`X-MS-Location`): test this one. To Exchange Online: the mailbox was moved, test it with `-Authority EntraID -EasUrl https://outlook.office365.com/Microsoft-Server-ActiveSync` (7.4). |
 | *Invalid token* failed | A forged token is accepted: check the publishing chain now (pre-authenticating proxy, bypass rule). |
 | No window with `-Gui` | Session without desktop (service, SSH): use the command line. |

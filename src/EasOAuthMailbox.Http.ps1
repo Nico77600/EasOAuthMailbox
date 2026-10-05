@@ -20,7 +20,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.0
+    Version : 1.2.1
 #>
 
 # Exchanges of the current run (List of objects), $null outside a run. Stage: current stage.
@@ -64,6 +64,31 @@ function Send-EomHttpRequest {
     }
 }
 
+function Get-EomNetworkErrorText {
+    <#
+        Readable reason of a request that got no answer: the message of the first network exception
+        (without the PowerShell "Exception calling GetResult" wrapper and ", see inner exception"),
+        followed by the innermost cause (the socket or TLS error). $null when no network exception is
+        in the chain: the caller then throws the original exception.
+    #>
+    param([Parameter(Mandatory = $true)][Exception]$Exception)
+
+    $chain = [Collections.Generic.List[Exception]]::new()
+    for ($e = $Exception; $e; $e = $e.InnerException) { $chain.Add($e) }
+    $outer = $chain | Where-Object {
+        $_ -is [Net.Http.HttpRequestException] -or $_ -is [IO.IOException] -or $_ -is [Net.Sockets.SocketException] -or
+        $_ -is [Security.Authentication.AuthenticationException] -or $_ -is [OperationCanceledException]
+    } | Select-Object -First 1
+    if (-not $outer) { return $null }
+    $text = ($outer.Message -replace '[,.]?\s*see inner exception\.?\s*$', '').Trim()
+    $inner = $chain[$chain.Count - 1]
+    if ($inner -ne $outer -and $inner -isnot [OperationCanceledException] -and $inner -isnot [TimeoutException] -and
+        -not [string]::IsNullOrWhiteSpace($inner.Message) -and -not $text.Contains($inner.Message.Trim())) {
+        $text = "$($text.TrimEnd('.')): $($inner.Message.Trim())"
+    }
+    return $text
+}
+
 function Invoke-EomHttp {
     <#
         Sends a request (Send-EomHttpRequest) and adds the exchange to the trace. Collapse: requests
@@ -85,6 +110,8 @@ function Invoke-EomHttp {
         $failure = $_.Exception
         while ($failure.InnerException) { $failure = $failure.InnerException }
         Add-EomTraceExchange -Request $Request -RequestBody $body -Failure $failure.Message -DurationMs $clock.ElapsedMilliseconds -Note $Note
+        $text = Get-EomNetworkErrorText -Exception $_.Exception
+        if ($text) { throw [Net.Http.HttpRequestException]::new($text, $_.Exception) }
         throw
     }
     Add-EomTraceExchange -Request $Request -RequestBody $body -Response $response -DurationMs $clock.ElapsedMilliseconds -Note $Note -Collapse $Collapse

@@ -3,6 +3,13 @@
 All notable changes are listed here. Versions follow MAJOR.MINOR.PATCH (see the guide, Annex D).
 Author: Nicolas Fabert.
 
+## [1.2.1] — 2026-10-05
+
+### Fixed
+- *TLS certificate* no longer says **Certificate not trusted** when the connection is closed during the TLS handshake, before the server sends its certificate: it now says *TLS handshake interrupted* and that the certificate is not in question — a firewall or NSG that filters the source address, a reverse proxy, or a VPN or Global Secure Access client that tunnels the address of the server. A certificate received and rejected keeps *not trusted*, with the reason (`RemoteCertificateChainErrors (UntrustedRoot)`, `RemoteCertificateNameMismatch`, `NotTimeValid`...). Seen on a lab: a Global Secure Access client tunnelled the address of the ActiveSync URL and the network security group refused the egress address of the tunnel.
+- A request that gets no answer gives its reason without the PowerShell wrapper: *The SSL connection could not be established: An existing connection was forcibly closed by the remote host* instead of *Exception calling "GetResult" with "0" argument(s): "The SSL connection could not be established, see inner exception."* (OAuth challenge, Autodiscover, endpoint...).
+- Guide: troubleshooting entry for an interrupted TLS handshake. 3 new tests (122 in total).
+
 ## [1.2.0] — 2026-10-05
 
 ### Added

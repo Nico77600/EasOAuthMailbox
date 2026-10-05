@@ -21,7 +21,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.0
+    Version : 1.2.1
 #>
 
 #region WBXML builders: Doc(header + content), T(tag with content), E(empty tag), P(code page) -------
@@ -507,7 +507,7 @@ function Get-SimHttpResponse {
 
 function Get-SimCertificate([string]$HostName, [int]$Port, [int]$DaysLeft) {
     [pscustomobject]@{
-        HostName = $HostName; Port = $Port; Reachable = $true; Valid = $true; Subject = "CN=$HostName"; Issuer = 'CN=Contoso Issuing CA 01, DC=contoso, DC=test'
+        HostName = $HostName; Port = $Port; Reachable = $true; Valid = $true; Interrupted = $false; Subject = "CN=$HostName"; Issuer = 'CN=Contoso Issuing CA 01, DC=contoso, DC=test'
         NotAfterUtc = [DateTime]::UtcNow.AddDays($DaysLeft).ToString('yyyy-MM-ddTHH:mm:ssZ'); DaysLeft = $DaysLeft; Protocol = 'Tls13'; Error = $null
     }
 }

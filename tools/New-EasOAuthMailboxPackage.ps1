@@ -22,11 +22,11 @@
 
 .EXAMPLE
     .\tools\New-EasOAuthMailboxPackage.ps1
-    Creates ..\package\EasOAuthMailbox-1.2.0.
+    Creates ..\package\EasOAuthMailbox-1.2.1.
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.0
+    Version : 1.2.1
 #>
 #Requires -Version 7.4
 [CmdletBinding()]

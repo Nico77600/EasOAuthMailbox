@@ -139,7 +139,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.0
+    Version : 1.2.1
     Exit codes : 0 = Passed, 1 = Failed, 2 = finished with warnings or blocked (policy not acknowledged).
     Documentation : docs\EasOAuthMailbox-Guide.html (source: docs\EasOAuthMailbox-Guide.md)
 #>

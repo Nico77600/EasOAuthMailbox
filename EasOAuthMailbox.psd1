@@ -8,7 +8,7 @@
 #
 @{
     RootModule        = 'EasOAuthMailbox.psm1'
-    ModuleVersion     = '1.2.0'
+    ModuleVersion     = '1.2.1'
     GUID              = 'a1a21a3b-4bb7-4f7c-9f7e-5d6e7b8c9012'
     Author            = 'Nicolas Fabert'
     Copyright         = '(c) 2026 Nicolas Fabert. MIT License.'

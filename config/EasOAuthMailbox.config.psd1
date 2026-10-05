@@ -2,7 +2,7 @@
 #  EAS OAuth Mailbox - configuration file
 #  --------------------------------------------------------------------------
 #  Author  : Nicolas Fabert
-#  Version : 1.2.0
+#  Version : 1.2.1
 #
 #  This file is read by Invoke-EasOAuthMailbox.ps1 and by the window (-Gui). It is a PowerShell
 #  data file: text between quotes, $true / $false, numbers, and @( ) for lists.

@@ -19,7 +19,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.0
+    Version : 1.2.1
     History : see CHANGELOG.md
 #>
 #Requires -Version 7.4
@@ -27,7 +27,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Net.Http
 
-$script:ToolVersion = '1.2.0'
+$script:ToolVersion = '1.2.1'
 $script:ToolRoot = $PSScriptRoot
 $script:EomUserAgent = 'EasOAuthMailbox/1.0'
 # Authentication of the current run: 'OAuth' (access token) or 'Basic' (user name and password).

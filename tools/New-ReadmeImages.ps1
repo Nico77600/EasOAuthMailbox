@@ -30,7 +30,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.0  (from Message Trace Report 1.1.0)
+    Version : 1.2.1  (from Message Trace Report 1.1.0)
     Part of : EAS OAuth Mailbox (repository tool, not in the package)
 #>
 [CmdletBinding()]

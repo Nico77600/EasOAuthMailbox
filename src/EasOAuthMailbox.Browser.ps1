@@ -18,7 +18,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.0
+    Version : 1.2.1
 #>
 
 # Page shown in the window once the code is caught, before it closes.

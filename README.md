@@ -103,7 +103,7 @@ And on the Exchange side, for the sign-in method you test:
 **The simplest: the window.**
 
 ```powershell
-cd C:\Tools\EasOAuthMailbox-1.2.0
+cd C:\Tools\EasOAuthMailbox-1.2.1
 .\Invoke-EasOAuthMailbox.ps1 -Gui
 ```
 

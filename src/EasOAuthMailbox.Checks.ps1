@@ -17,7 +17,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.0
+    Version : 1.2.1
 #>
 
 #region Helpers ---------------------------------------------------------------------------
@@ -134,11 +134,13 @@ function Get-EomTlsCertificate {
     <#
         Server certificate of HostName:Port with the default Windows validation. Reachable = $false
         when no direct TCP connection is possible (proxy, firewall); Valid = $false when the TLS
-        handshake rejects the certificate.
+        handshake fails: Interrupted = $true when the connection was closed before the server sent a
+        certificate (firewall, NSG, proxy or VPN client on the path), $false when the certificate was
+        received and rejected.
     #>
     param([Parameter(Mandatory = $true)][string]$HostName, [int]$Port = 443, [int]$TimeoutSeconds = 10)
 
-    $result = [ordered]@{ HostName = $HostName; Port = $Port; Reachable = $false; Valid = $false; Subject = $null; Issuer = $null; NotAfterUtc = $null; DaysLeft = $null; Protocol = $null; Error = $null }
+    $result = [ordered]@{ HostName = $HostName; Port = $Port; Reachable = $false; Valid = $false; Interrupted = $false; Subject = $null; Issuer = $null; NotAfterUtc = $null; DaysLeft = $null; Protocol = $null; Error = $null }
     $tcp = [Net.Sockets.TcpClient]::new()
     try {
         try {
@@ -155,14 +157,26 @@ function Get-EomTlsCertificate {
         $result.Reachable = $true
         $tcp.ReceiveTimeout = $TimeoutSeconds * 1000
         $tcp.SendTimeout = $TimeoutSeconds * 1000
-        $ssl = [Net.Security.SslStream]::new($tcp.GetStream(), $false)
+        # Same decision as Windows (no policy error), and a trace of whether a certificate arrived at all.
+        $received = @{ Certificate = $false; Errors = $null }
+        $validate = [Net.Security.RemoteCertificateValidationCallback]{
+            param($sender, $certificate, $chain, $errors)
+            if ($certificate) { $received.Certificate = $true }
+            if ($errors -ne [Net.Security.SslPolicyErrors]::None) {
+                $status = @($chain.ChainStatus | ForEach-Object { [string]$_.Status } | Where-Object { $_ -ne 'NoError' } | Select-Object -Unique)
+                $received.Errors = "The remote certificate is invalid: $errors$(if ($status) { " ($($status -join ', '))" })"
+            }
+            return $errors -eq [Net.Security.SslPolicyErrors]::None
+        }.GetNewClosure()
+        $ssl = [Net.Security.SslStream]::new($tcp.GetStream(), $false, $validate)
         try {
             try {
                 $ssl.AuthenticateAsClient($HostName)
             }
             catch {
                 $inner = $_.Exception; while ($inner.InnerException) { $inner = $inner.InnerException }
-                $result.Error = $inner.Message
+                $result.Error = if ($received.Errors) { $received.Errors } else { $inner.Message }
+                $result.Interrupted = -not $received.Certificate
                 return [pscustomobject]$result
             }
             $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($ssl.RemoteCertificate)
@@ -1039,17 +1053,23 @@ function Add-EomTlsCheck {
     $cert = Get-EomTlsCertificate -HostName $HostName -Port $Port -TimeoutSeconds ([Math]::Min(15, [int]$cfg.HttpTimeoutSeconds))
     $name = "TLS certificate ($HostName)"
     $details = [ordered]@{ Host = "$($HostName):$Port"; Subject = $cert.Subject; Issuer = $cert.Issuer; NotAfterUtc = $cert.NotAfterUtc; DaysLeft = $cert.DaysLeft; Protocol = $cert.Protocol; Error = $cert.Error }
-    $received = if ($cert.Reachable) { "Certificate
+    $received = if (-not $cert.Reachable) { "No TLS connection: $($cert.Error)" }
+    elseif ($cert.Interrupted) { "No certificate: the connection was closed during the TLS handshake ($($cert.Error))" }
+    else { "Certificate
 Subject: $($cert.Subject)
 Issuer: $($cert.Issuer)
 Valid until: $($cert.NotAfterUtc) ($($cert.DaysLeft) day(s))
 Protocol: $($cert.Protocol)
-Trusted by this computer: $(if ($cert.Valid) { 'yes' } else { "no - $($cert.Error)" })" } else { "No TLS connection: $($cert.Error)" }
+Trusted by this computer: $(if ($cert.Valid) { 'yes' } else { "no - $($cert.Error)" })" }
     Add-EomTraceEntry -Method 'TLS' -Url "tls://$($HostName):$Port" -Request "TLS handshake (ClientHello)
 Server name (SNI): $HostName
 Port: $Port" -Response $received -Note 'Direct TLS connection (no HTTP request): the certificate the server presents.'
     if (-not $cert.Reachable) {
         Add-EomStep $Context $Stage $name Warning "No direct TLS connection ($($cert.Error)). Expected behind a proxy (the HTTPS checks use the system proxy); otherwise check DNS and the firewall." $details
+    }
+    elseif ($cert.Interrupted) {
+        Add-EomStep $Context $Stage $name Failed ("TLS handshake interrupted before the server sent its certificate ($($cert.Error)): the certificate is not in question. " +
+            "Something on the path closes the connection: a firewall or NSG that filters the source address, a reverse proxy, or a VPN or Global Secure Access client that tunnels this address. Try from another network.") $details
     }
     elseif (-not $cert.Valid) {
         Add-EomStep $Context $Stage $name Failed "Certificate not trusted by this computer: $($cert.Error)" $details
