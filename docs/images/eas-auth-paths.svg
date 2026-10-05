@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="430" viewBox="0 0 960 430" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="960" height="430" fill="#f7f4ef"/>
+  <text x="24" y="36" fill="#b11f4b" font-size="12" font-weight="700" letter-spacing="1.4">THREE WAYS TO SIGN IN  ·  EXCHANGE DECIDES FOR EACH USER</text>
+
+  <rect x="24" y="148" width="160" height="140" rx="12" fill="#ffffff" stroke="#dedede"/>
+  <rect x="24" y="148" width="160" height="5" rx="2" fill="#5c5c5c"/>
+  <text x="38" y="176" font-size="11" font-weight="700" fill="#5c5c5c">1 · DEVICE</text>
+  <text x="38" y="200" font-size="15" font-weight="600" fill="#242424">Phone or tool</text>
+  <g font-size="12" fill="#5c5c5c"><text x="38" y="224">Only the address</text><text x="38" y="242">Autodiscover finds</text><text x="38" y="260">the ActiveSync URL</text></g>
+
+  <rect x="214" y="148" width="172" height="140" rx="12" fill="#ffffff" stroke="#dedede"/>
+  <rect x="214" y="148" width="172" height="5" rx="2" fill="#5c5c5c"/>
+  <text x="228" y="176" font-size="11" font-weight="700" fill="#5c5c5c">2 · EXCHANGE: 401</text>
+  <text x="228" y="200" font-size="15" font-weight="600" fill="#242424">Sign in where?</text>
+  <g font-size="12" fill="#5c5c5c"><text x="228" y="224">Default authorization</text><text x="228" y="242">server (Get-AuthServer)</text><text x="228" y="260">+ authentication policy</text></g>
+
+  <g fill="#ffffff" stroke="#dedede">
+    <rect x="420" y="58" width="320" height="100" rx="12"/>
+    <rect x="420" y="168" width="320" height="100" rx="12"/>
+    <rect x="420" y="278" width="320" height="100" rx="12"/>
+  </g>
+  <rect x="420" y="58" width="6" height="100" rx="3" fill="#b11f4b"/>
+  <rect x="420" y="168" width="6" height="100" rx="3" fill="#0078d4"/>
+  <rect x="420" y="278" width="6" height="100" rx="3" fill="#d97706"/>
+
+  <text x="440" y="82" font-size="11" font-weight="700" fill="#b11f4b">A · AD FS  ·  ON-PREMISES</text>
+  <text x="440" y="104" font-size="15" font-weight="600" fill="#242424">OAuth with AD FS</text>
+  <g font-size="12" fill="#5c5c5c"><text x="440" y="126">Exchange 2019 CU13+ or SE, no hybrid</text><text x="440" y="144">AD FS token  ·  -Authority ADFS</text></g>
+
+  <text x="440" y="192" font-size="11" font-weight="700" fill="#0078d4">B · ENTRA ID  ·  HMA OR EXCHANGE ONLINE</text>
+  <text x="440" y="214" font-size="15" font-weight="600" fill="#242424">OAuth with Entra ID</text>
+  <g font-size="12" fill="#5c5c5c"><text x="440" y="236">On-premises (EvoSts) or Exchange Online</text><text x="440" y="254">MFA, Conditional Access  ·  -Authority EntraID</text></g>
+
+  <text x="440" y="302" font-size="11" font-weight="700" fill="#d97706">C · BASIC  ·  LEGACY</text>
+  <text x="440" y="324" font-size="15" font-weight="600" fill="#242424">User name and password</text>
+  <g font-size="12" fill="#5c5c5c"><text x="440" y="346">OAuth not offered: the device asks</text><text x="440" y="364">for the password  ·  -Authentication Basic</text></g>
+
+  <rect x="776" y="148" width="160" height="140" rx="12" fill="#ffffff" stroke="#dedede"/>
+  <rect x="776" y="148" width="160" height="5" rx="2" fill="#16a34a"/>
+  <text x="790" y="176" font-size="11" font-weight="700" fill="#16a34a">3 · ACTIVESYNC</text>
+  <text x="790" y="200" font-size="15" font-weight="600" fill="#242424">Same path</text>
+  <g font-size="12" fill="#5c5c5c"><text x="790" y="224">Provision, FolderSync</text><text x="790" y="242">Settings, Sync</text><text x="790" y="260">Same checks, report</text></g>
+
+  <g stroke-width="2" fill="none">
+    <path d="M186 218h24M204 212l6 6-6 6" stroke="#919191"/>
+    <path d="M388 218C404 218 402 108 416 108M410 102l6 6-6 6" stroke="#b11f4b"/>
+    <path d="M388 218h28M410 215l6 3-6 3" stroke="#0078d4"/>
+    <path d="M388 218C404 218 402 328 416 328M410 322l6 6-6 6" stroke="#d97706"/>
+    <path d="M742 108C758 108 756 214 772 214" stroke="#b11f4b"/>
+    <path d="M742 218h30" stroke="#0078d4"/>
+    <path d="M742 328C758 328 756 222 772 222" stroke="#d97706"/>
+    <path d="M766 212l6 6-6 6" stroke="#16a34a"/>
+  </g>
+
+  <rect x="24" y="390" width="912" height="30" rx="9" fill="#ffffff" stroke="#dedede"/>
+  <text x="38" y="410" font-size="12" fill="#242424"><tspan font-weight="700">-Authority Auto</tspan> signs in where Exchange sends the user (A or B), like a client.  <tspan font-weight="700">AppleMail</tspan> always does.</text>
+</svg>

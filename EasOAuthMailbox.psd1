@@ -8,11 +8,11 @@
 #
 @{
     RootModule        = 'EasOAuthMailbox.psm1'
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.2.0'
     GUID              = 'a1a21a3b-4bb7-4f7c-9f7e-5d6e7b8c9012'
     Author            = 'Nicolas Fabert'
     Copyright         = '(c) 2026 Nicolas Fabert. MIT License.'
-    Description       = 'EAS OAuth Mailbox: step-by-step diagnostic of Exchange ActiveSync with OAuth (AD FS) - prerequisites, sign-in and token claims, endpoint, provisioning, folders, identity and Inbox headers - with CSV, JSON and HTML reports and a window to choose the scenario.'
+    Description       = 'EAS OAuth Mailbox: step-by-step diagnostic of Exchange ActiveSync with OAuth (AD FS or Entra ID) or Basic authentication - prerequisites, sign-in and token claims, endpoint, provisioning, folders, identity and Inbox headers - with CSV, JSON and HTML reports and a window to choose the scenario.'
     PowerShellVersion = '7.4'
 
     # Functions called by Invoke-EasOAuthMailbox.ps1, the tests and the documentation tool. The other functions stay internal.

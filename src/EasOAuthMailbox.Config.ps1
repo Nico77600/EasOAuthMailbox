@@ -5,19 +5,20 @@
 .DESCRIPTION
     The configuration file has sections (Target, Device, Test, Report, Logging, AppleMail), like the other
     tools. It is flattened into one settings hashtable used by the CLI, the GUI and the tests;
-    unknown sections or keys and invalid values are all reported at once.
+    unknown sections or keys and invalid values are all reported at once. The Basic password is
+    never part of it: it is asked at run time (-Credential, prompt or window) and stays in memory.
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.0.0
+    Version : 1.2.0
 #>
 
 # Section.Key of the configuration file -> key of the settings hashtable.
 $script:ConfigSchema = [ordered]@{
-    Target  = [ordered]@{ AdfsUrl = 'AdfsUrl'; EasUrl = 'EasUrl'; Mailbox = 'Mailbox'; ClientId = 'ClientId' }
+    Target  = [ordered]@{ AdfsUrl = 'AdfsUrl'; EasUrl = 'EasUrl'; Mailbox = 'Mailbox'; ClientId = 'ClientId'; BasicUser = 'BasicUser'; Authority = 'Authority'; TenantId = 'TenantId' }
     Device  = [ordered]@{ DeviceId = 'DeviceId'; DeviceType = 'DeviceType'; UserAgent = 'UserAgent' }
     Test    = [ordered]@{
-        DefaultType = 'TestType'; MessageCount = 'MessageCount'; AcknowledgePolicy = 'AcknowledgePolicy'
+        DefaultType = 'TestType'; Authentication = 'Authentication'; SignIn = 'SignIn'; MessageCount = 'MessageCount'; AcknowledgePolicy = 'AcknowledgePolicy'
         OAuthPollTimeoutSeconds = 'OAuthPollTimeoutSeconds'; HttpTimeoutSeconds = 'HttpTimeoutSeconds'
         CertificateWarningDays = 'CertificateWarningDays'
     }
@@ -43,12 +44,40 @@ $script:AppleMail = @{
     Claims           = '{"access_token":{"xms_cc":{"values":["cp1"]}}}'
 }
 
+# Entra ID signs the user in for two kinds of mailboxes, with the same flows:
+#   Exchange on-premises with hybrid modern authentication (HMA): Exchange sends the clients to Entra ID
+#     instead of AD FS (Get-AuthServer 'EvoSts - <id>' -IsDefaultAuthorizationEndpoint $true). Recorded on
+#     Exchange Server SE in hybrid (2026-10-03): authorization_uri="https://login.windows.net/common/oauth2/authorize",
+#     issuer_kind="AzureAD", trusted_issuers="00000001-0000-0000-c000-000000000000@<tenant ID>".
+#   Exchange Online (https://outlook.office365.com/Microsoft-Server-ActiveSync): the same challenge,
+#     with trusted_issuers="00000001-0000-0000-c000-000000000000@*" (every tenant).
+$script:Entra = @{
+    LoginHost   = 'login.microsoftonline.com'
+    # Hosts of the Entra ID sign-in service (worldwide, US Government, China).
+    Hosts       = @('login.microsoftonline.com', 'login.windows.net', 'login.microsoft.com', 'sts.windows.net', 'login.microsoftonline.us', 'login.partner.microsoftonline.cn', 'login.chinacloudapi.cn')
+    # Application ID of the Entra ID token service, in trusted_issuers (<id>@<tenant ID>).
+    EvoStsId    = '00000001-0000-0000-c000-000000000000'
+    # Application ID of Office 365 Exchange Online: the on-premises URLs are its service principal names.
+    ExchangeApp = '00000002-0000-0ff1-ce00-000000000000'
+    # ActiveSync hosts of Exchange Online (worldwide, GCC High, DoD, operated by 21Vianet).
+    OnlineHosts = @('outlook.office365.com', 'outlook.office.com', 'outlook.office365.us', 'outlook-dod.office365.us', 'partner.outlook.cn')
+}
+
+# Redirect URIs of the sign-in window (authorization code): Entra ID returns the code of the native clients
+# of Microsoft (Microsoft Office d3590ed6...) to its native-client page; the AD FS application group of the
+# Exchange documentation registers urn:ietf:wg:oauth:2.0:oob for that client (Add-AdfsNativeClientApplication).
+# AppleMail uses the redirect URI of the iPhone ($script:AppleMail.RedirectUris[0]).
+$script:SignInRedirect = @{
+    EntraID = 'https://login.microsoftonline.com/common/oauth2/nativeclient'
+    ADFS    = 'urn:ietf:wg:oauth:2.0:oob'
+}
+
 # Scenarios and the stages they run, in order. A stage runs only if no earlier stage failed or was blocked.
 $script:Scenarios = @(
     @{ Name = 'Discovery'; DisplayName = 'Prerequisites without sign-in'; Stages = @('Discovery')
-       Description = 'AD FS metadata, TLS certificates, OAuth challenge advertised by ActiveSync, rejection of an invalid token. No sign-in, nothing created.' }
-    @{ Name = 'OAuth'; DisplayName = 'AD FS sign-in and token'; Stages = @('OAuth')
-       Description = 'AD FS device-code sign-in, then the claims of the token: audience, scope, expiry and user.' }
+       Description = 'AD FS or Entra ID metadata, TLS certificates, OAuth challenge advertised by ActiveSync and the server it names, OAuth offered to the mailbox, rejection of an invalid token. No sign-in, nothing created.' }
+    @{ Name = 'OAuth'; DisplayName = 'Sign-in and token'; Stages = @('OAuth')
+       Description = 'Sign-in with AD FS or Entra ID in a window or with a device code, then the claims of the token: audience, scope, expiry and user.' }
     @{ Name = 'Endpoint'; DisplayName = 'ActiveSync endpoint'; Stages = @('OAuth', 'Endpoint')
        Description = 'Sign-in, then ActiveSync OPTIONS with the token: Exchange version, protocol versions and commands.' }
     @{ Name = 'FolderSync'; DisplayName = 'Mailbox folders'; Stages = @('OAuth', 'Endpoint', 'FolderSync')
@@ -62,14 +91,15 @@ $script:Scenarios = @(
     @{ Name = 'Full'; DisplayName = 'Complete diagnostic'; Stages = @('Discovery', 'OAuth', 'Endpoint', 'FolderSync', 'Identity', 'InboxSync')
        Description = 'Every check in order: prerequisites, sign-in, endpoint, folders, identity and Inbox headers.' }
     @{ Name = 'AppleMail'; DisplayName = 'Apple Mail on an iPhone'; Client = 'AppleMail'; Stages = @('AppleSetup', 'OAuth', 'Endpoint', 'FolderSync', 'Identity', 'InboxSync')
-       Description = 'Adds the account like the Mail app of an iPhone: Autodiscover, AD FS found in the Exchange challenge, Apple Mail client in AD FS, sign-in with that client, then ActiveSync 16.1 as an iPhone.' }
+       Description = 'Adds the account like the Mail app of an iPhone: Autodiscover, AD FS or Entra ID found in the Exchange challenge, the sign-in page of the Apple Mail client, sign-in with that client, then ActiveSync 16.1 as an iPhone.' }
 )
 
 $script:StageInfo = @{
     Discovery    = @{ Title = 'Prerequisites without sign-in'; Icon = 'Search' }
     AppleSetup   = @{ Title = 'Account setup like the iPhone (no sign-in)'; Icon = 'Search' }
-    OAuth        = @{ Title = 'AD FS sign-in and token'; Icon = 'Key' }
-    Endpoint     = @{ Title = 'ActiveSync endpoint with the token'; Icon = 'Server' }
+    OAuth        = @{ Title = 'AD FS sign-in and token'; EntraTitle = 'Entra ID sign-in and token'; AutoTitle = 'OAuth sign-in and token (server given by Exchange)'; Icon = 'Key' }
+    Basic        = @{ Title = 'Basic authentication (user name and password)'; Icon = 'Key' }
+    Endpoint     = @{ Title = 'ActiveSync endpoint with the token'; BasicTitle = 'ActiveSync endpoint with the user name and password'; Icon = 'Server' }
     Provisioning = @{ Title = 'ActiveSync policy'; Icon = 'Shield' }
     FolderSync   = @{ Title = 'Mailbox folders (FolderSync)'; Icon = 'Folder' }
     Identity     = @{ Title = 'Mailbox identity (Settings)'; Icon = 'People' }
@@ -95,12 +125,41 @@ function Get-EomTestCatalog {
     }
 }
 
+function Get-EomScenarioStages {
+    <#
+        Stages a scenario runs. With Basic authentication the AD FS sign-in (OAuth stage) is replaced
+        by the Basic stage: the user name and password are checked, then sent with every request.
+    #>
+    param([Parameter(Mandatory = $true)][string]$TestType, [string]$Authentication = 'OAuth')
+
+    $scenario = $script:Scenarios | Where-Object { $_.Name -eq $TestType } | Select-Object -First 1
+    if (-not $scenario) { return }
+    foreach ($stage in $scenario.Stages) {
+        if ($stage -eq 'OAuth' -and $Authentication -eq 'Basic') { 'Basic' } else { $stage }
+    }
+}
+
+function Get-EomStageTitle {
+    <# Title of a stage in the console, the window and the report; some depend on the authentication and the authorization server. #>
+    param([Parameter(Mandatory = $true)][string]$Stage, [string]$Authentication = 'OAuth', [string]$Authority = 'ADFS')
+    $info = $script:StageInfo[$Stage]
+    if ($Authentication -eq 'Basic' -and $info.ContainsKey('BasicTitle')) { return $info.BasicTitle }
+    if ($Authority -eq 'EntraID' -and $info.ContainsKey('EntraTitle')) { return $info.EntraTitle }
+    if ($Authority -eq 'Auto' -and $info.ContainsKey('AutoTitle')) { return $info.AutoTitle }
+    return $info.Title
+}
+
 function Get-EomDefaultConfiguration {
     @{
         AdfsUrl                 = 'https://adfs.contoso.test/adfs'
         EasUrl                  = 'https://mail.contoso.test/Microsoft-Server-ActiveSync'
         Mailbox                 = 'eas-test@contoso.test'
         ClientId                = 'd3590ed6-52b3-4102-aeff-aad2292ab01c'
+        BasicUser               = ''
+        Authority               = 'ADFS'
+        TenantId                = ''
+        Authentication          = 'OAuth'
+        SignIn                  = 'Auto'
         DeviceId                = ''
         DeviceType              = 'EasOAuthMailbox'
         UserAgent               = 'EasOAuthMailbox/1.0'
@@ -149,6 +208,16 @@ function Resolve-EomClientSettings {
         $cfg.DeviceOS = 'iOS (simulated by EAS OAuth Mailbox)'
         # The iPhone is never told where AD FS is: it reads it in the Exchange challenge (AppleSetup).
         $cfg.AdfsUrl = ''
+        $cfg.Authority = 'Auto'
+    }
+    if ([string]$cfg.Authority -in 'EntraID', 'Auto') {
+        # Entra ID, or the server Exchange names in its challenge: the AD FS URL is not used.
+        $cfg.AdfsUrl = ''
+    }
+    if ([string]$cfg.Authentication -eq 'Basic') {
+        # Basic authentication never contacts AD FS: no AD FS URL, no client.
+        $cfg.AdfsUrl = ''
+        $cfg.ClientId = ''
     }
     return $cfg
 }
@@ -190,6 +259,12 @@ function Test-EomConfiguration {
     # AppleMail needs only the mailbox, like the iPhone: AD FS comes from the Exchange challenge and
     # the ActiveSync URL from Autodiscover (Target.EasUrl, if set, is the server typed by hand).
     $apple = [string]$c.TestType -eq 'AppleMail'
+    # Basic authentication never contacts AD FS: Target.AdfsUrl and Target.ClientId are not used.
+    $basic = [string]$c.Authentication -eq 'Basic'
+    # Entra ID (Exchange on-premises with HMA, or Exchange Online) or the server named by Exchange: Target.AdfsUrl is not used.
+    $noAdfs = $apple -or $basic -or [string]$c.Authority -in 'EntraID', 'Auto'
+    # Exchange Online trusts only Entra ID and no longer accepts Basic (AppleMail takes the URL from Autodiscover).
+    $online = -not $apple -and (Test-EomExchangeOnlineUrl -Url ([string]$c.EasUrl))
     $number = {
         param([string]$Key, [string]$Label, [int]$Min, [int]$Max)
         $n = 0
@@ -202,17 +277,35 @@ function Test-EomConfiguration {
             @('DeviceType', 'Device.DeviceType'), @('UserAgent', 'Device.UserAgent'), @('OutputPath', 'Report.OutputPath'), @('ReportPrefix', 'Report.FilePrefix'),
             @('AppleClientId', 'AppleMail.ClientId'), @('AppleUserAgent', 'AppleMail.UserAgent'), @('AppleDeviceType', 'AppleMail.DeviceType'))) {
         if ($apple -and $pair[0] -in 'AdfsUrl', 'EasUrl', 'ClientId') { continue }
+        if ($basic -and $pair[0] -in 'AdfsUrl', 'ClientId') { continue }
+        if ($noAdfs -and $pair[0] -eq 'AdfsUrl') { continue }
         if ([string]::IsNullOrWhiteSpace([string]$c[$pair[0]])) { [void]$problems.Add("$($pair[1]) is required.") }
     }
     if ([string]$c.AppleDeviceType -and [string]$c.AppleDeviceType -notmatch '^[A-Za-z0-9]{1,32}$') { [void]$problems.Add('AppleMail.DeviceType must contain 1 to 32 letters or digits.') }
     if ([string]$c.AppleUserAgent -match '[\r\n]') { [void]$problems.Add('AppleMail.UserAgent must be on one line.') }
     $endpointProblems = (Test-EomEndpoint -AdfsUrl ([string]$c.AdfsUrl) -EasUrl ([string]$c.EasUrl)).Problems
-    # Format of a URL that is set (an empty one is reported as required above); Target.AdfsUrl is not used by AppleMail.
+    # Format of a URL that is set (an empty one is reported as required above); Target.AdfsUrl is used only with AD FS.
     $endpointProblems = @($endpointProblems | Where-Object {
-            ($_ -like 'Target.EasUrl*' -and [string]$c.EasUrl) -or ($_ -like 'Target.AdfsUrl*' -and [string]$c.AdfsUrl -and -not $apple)
+            ($_ -like 'Target.EasUrl*' -and [string]$c.EasUrl) -or ($_ -like 'Target.AdfsUrl*' -and [string]$c.AdfsUrl -and -not $noAdfs)
         })
     foreach ($p in $endpointProblems) { [void]$problems.Add($p) }
 
+    if ([string]$c.Authentication -notin 'OAuth', 'Basic') { [void]$problems.Add("Test.Authentication must be 'OAuth' or 'Basic'.") }
+    if ([string]$c.Authority -notin 'ADFS', 'EntraID', 'Auto') { [void]$problems.Add("Target.Authority must be 'ADFS', 'EntraID' or 'Auto'.") }
+    if ([string]$c.SignIn -notin 'Auto', 'Window', 'DeviceCode') { [void]$problems.Add("Test.SignIn must be 'Auto', 'Window' or 'DeviceCode'.") }
+    if ([string]$c.TenantId -and [string]$c.TenantId -notmatch '^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+)$') {
+        [void]$problems.Add('Target.TenantId must be empty (= the domain of the mailbox), a tenant ID (GUID) or a domain of the tenant.')
+    }
+    if ($basic -and [string]$c.TestType -eq 'OAuth') { [void]$problems.Add('The OAuth scenario tests the AD FS sign-in: with Basic authentication, run Endpoint (user name and password checked) or a later scenario.') }
+    if ($online -and -not $basic -and [string]$c.Authority -eq 'ADFS') {
+        [void]$problems.Add('Exchange Online accepts only Entra ID tokens: with this Target.EasUrl set Target.Authority to EntraID (or Auto). A federated user still types the password on AD FS, through Entra ID.')
+    }
+    $signsIn = @($script:Scenarios | Where-Object { $_.Name -eq [string]$c.TestType } | ForEach-Object { $_.Stages } | Where-Object { $_ -eq 'OAuth' }).Count
+    if ($online -and $basic -and $signsIn) {
+        [void]$problems.Add('Exchange Online no longer accepts Basic authentication for ActiveSync: test this mailbox with OAuth and Entra ID (Target.Authority EntraID). Discovery with Basic shows what Exchange Online offers, without a password.')
+    }
+    # Basic sends "user:password": a user name with ':' or a line break cannot be sent.
+    if ([string]$c.BasicUser -and [string]$c.BasicUser -notmatch '^([^@\s:\\]+@[^@\s:\\]+|[^@\s:\\]+\\[^@\s:\\]+)$') { [void]$problems.Add('Target.BasicUser must be empty (= Target.Mailbox), a UPN (user@domain) or DOMAIN\user.') }
     if ([string]$c.Mailbox -and [string]$c.Mailbox -notmatch '^[^@\s]+@[^@\s]+\.[^@\s]+$') { [void]$problems.Add('Target.Mailbox must be an SMTP address or a UPN (user@domain).') }
     if ([string]$c.DeviceType -notmatch '^[A-Za-z0-9]{1,32}$') { [void]$problems.Add('Device.DeviceType must contain 1 to 32 letters or digits.') }
     if ([string]$c.DeviceId -and [string]$c.DeviceId -notmatch '^[A-Za-z0-9]{1,32}$') { [void]$problems.Add('Device.DeviceId must be empty or contain 1 to 32 letters or digits.') }
@@ -266,8 +359,9 @@ function Import-EomConfiguration {
     }
     $settings.ConfigPath = [IO.Path]::GetFullPath($Path)
     foreach ($p in (Test-EomConfiguration -Configuration $settings).Problems) {
-        # The URLs are checked again once the scenario is known: AppleMail needs neither of them.
-        if ($p -in 'Target.AdfsUrl is required.', 'Target.EasUrl is required.') { continue }
+        # Checked again once the scenario and the authentication are known (command line, window):
+        # AppleMail needs no URL, Basic needs neither AD FS nor a client ID.
+        if ($p -in 'Target.AdfsUrl is required.', 'Target.EasUrl is required.', 'Target.ClientId is required.' -or $p -like 'The OAuth scenario tests the AD FS sign-in*') { continue }
         [void]$problems.Add($p)
     }
     if ($problems.Count) { throw ("Invalid configuration ($Path):`n - " + ($problems -join "`n - ")) }
@@ -293,25 +387,49 @@ function Get-EomDeviceId {
     }
 }
 
+function Test-EomExchangeOnlineUrl {
+    <# Whether an ActiveSync URL is the one of Exchange Online (outlook.office365.com and the other clouds). #>
+    param([AllowEmptyString()][AllowNull()][string]$Url)
+
+    $uri = $null
+    if (-not $Url -or -not [Uri]::TryCreate($Url, [UriKind]::Absolute, [ref]$uri)) { return $false }
+    return $script:Entra.OnlineHosts -contains $uri.Host.ToLowerInvariant()
+}
+
 function Resolve-EomEndpoints {
-    <# URLs derived from the configuration. AdfsUrl or EasUrl may be empty (AppleMail finds them like the iPhone). #>
+    <#
+        URLs derived from the configuration. AdfsUrl or EasUrl may be empty (AppleMail finds them like
+        the iPhone). Authority EntraID: the endpoints of the tenant (TenantId, a GUID or a domain),
+        Microsoft identity platform v2.0, the same flows as AD FS (authorization code in the sign-in window,
+        device code). ExchangeOnline: the ActiveSync URL is the one of Exchange Online.
+    #>
     param([Parameter(Mandatory = $true)][hashtable]$Configuration)
 
-    $adfsRoot = ([string]$Configuration.AdfsUrl).TrimEnd('/')
+    $authority = if ([string]$Configuration['Authority']) { [string]$Configuration['Authority'] } else { 'ADFS' }
+    $tenant = [string]$Configuration['TenantId']
+    $adfsRoot = ([string]$Configuration['AdfsUrl']).TrimEnd('/')
     $adfsUri = if ($adfsRoot) { [Uri]$adfsRoot } else { $null }
-    $easUrl = ([string]$Configuration.EasUrl).TrimEnd('/')
+    $easUrl = ([string]$Configuration['EasUrl']).TrimEnd('/')
     $easUri = if ($easUrl) { [Uri]$easUrl } else { $null }
     $resource = if ($easUri) { $easUri.GetLeftPart([UriPartial]::Authority) + '/' } else { $null }
+    $entraRoot = if ($authority -eq 'EntraID' -and $tenant) { "https://$($script:Entra.LoginHost)/$tenant" } else { $null }
     [pscustomobject]@{
+        Authority          = $authority
+        TenantId           = $tenant
         AdfsRoot           = $adfsRoot
+        EntraRoot          = $entraRoot
         EasUrl             = $easUrl
+        ExchangeOnline     = Test-EomExchangeOnlineUrl -Url $easUrl
         Resource           = $resource
-        # The AD FS Web API identifier ends with '/', and the resource-qualified scope syntax adds
-        # another '/': the double slash is intentional.
-        Scope              = if ($resource) { "openid $($resource)/EAS.AccessAsUser.All" } else { $null }
-        DeviceCodeEndpoint = if ($adfsRoot) { "$adfsRoot/oauth2/devicecode" } else { $null }
-        TokenEndpoint      = if ($adfsRoot) { "$adfsRoot/oauth2/token" } else { $null }
-        MetadataEndpoint   = if ($adfsRoot) { "$adfsRoot/.well-known/openid-configuration" } else { $null }
+        # AD FS: the Web API identifier ends with '/', and the resource-qualified scope syntax adds
+        # another '/' (the double slash is intentional). Entra ID: the URL of Exchange Online, or the
+        # on-premises URL registered as a service principal name of Office 365 Exchange Online (HMA);
+        # the scope is that URL and the permission.
+        Scope              = if (-not $resource) { $null } elseif ($authority -eq 'EntraID') { "$($resource)EAS.AccessAsUser.All" } else { "openid $($resource)/EAS.AccessAsUser.All" }
+        AuthorizeEndpoint  = if ($entraRoot) { "$entraRoot/oauth2/v2.0/authorize" } elseif ($adfsRoot) { "$adfsRoot/oauth2/authorize" } else { $null }
+        DeviceCodeEndpoint = if ($entraRoot) { "$entraRoot/oauth2/v2.0/devicecode" } elseif ($adfsRoot) { "$adfsRoot/oauth2/devicecode" } else { $null }
+        TokenEndpoint      = if ($entraRoot) { "$entraRoot/oauth2/v2.0/token" } elseif ($adfsRoot) { "$adfsRoot/oauth2/token" } else { $null }
+        MetadataEndpoint   = if ($entraRoot) { "$entraRoot/v2.0/.well-known/openid-configuration" } elseif ($adfsRoot) { "$adfsRoot/.well-known/openid-configuration" } else { $null }
         AdfsHost           = if ($adfsUri) { $adfsUri.Host } else { $null }
         AdfsPort           = if ($adfsUri) { $adfsUri.Port } else { $null }
         EasHost            = if ($easUri) { $easUri.Host } else { $null }

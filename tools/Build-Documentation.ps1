@@ -26,7 +26,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.0.0
+    Version : 1.2.0
     PowerShell pitfall: never name a variable $matches — every -match overwrites the automatic
     $Matches, and variable names are case-insensitive.
 #>
@@ -82,6 +82,7 @@ $Icons = @{
     warning   = '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/>'
     folder    = '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
     phone     = '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 5.5h3M11 18.5h2"/>'
+    cloud     = '<path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.6 9.1 4.75 4.75 0 0 0 7 18.5z"/>'
 }
 function Get-Icon([string]$Name, [string]$Class = 'icon') {
     $path = $Icons[$Name]; if (-not $path) { $path = $Icons['info'] }
@@ -150,6 +151,12 @@ $html = [regex]::Replace($html, '(?s)<pre><code(?: class="language-([\w-]+)")?>(
 
 # ---- Tables, images, links, alerts -------------------------------------------------------------------------
 $html = $html.Replace('<table>', '<div class="table-wrap"><table>').Replace('</table>', '</table></div>')
+# A '|' inside a table cell is written '\|' in Markdown; the converter keeps the backslash in code spans.
+# Short code stays on one line in a table cell; a long one (a command, a URL) may wrap instead of widening the table.
+$html = [regex]::Replace($html, '(?s)<td( [^>]*)?>(.*?)</td>', {
+        param($m)
+        [regex]::Replace($m.Value.Replace('\|', '|'), '<code>([^<]{45,})</code>', '<code class="long">$1</code>')
+    })
 $html = [regex]::Replace($html, '<p><img src="([^"]+)" alt="([^"]*)" /></p>', {
         param($m)
         $path = Join-Path $docs ([Uri]::UnescapeDataString($m.Groups[1].Value))
@@ -186,7 +193,7 @@ for ($i = 0; $i -lt $headings.Count; $i++) {
             "<span class=""badge"">$(Get-Icon 'calendar' 'icon-sm')Updated $($meta.updated)</span>",
             "<span class=""badge"">$(Get-Icon 'user' 'icon-sm')$($meta.author)</span>",
             "<span class=""badge"">$(Get-Icon 'terminal' 'icon-sm')PowerShell 7.4+</span>",
-            "<span class=""badge"">$(Get-Icon 'shield' 'icon-sm')Sans SQLite · sans secret</span>") -join ''
+            "<span class=""badge"">$(Get-Icon 'shield' 'icon-sm')No SQLite · no stored secret</span>") -join ''
         $hero = "<header class=""hero"" id=""top""><div class=""hero-top""><div class=""hero-logo"">$(Get-Icon 'server')</div><div><div class=""eyebrow"">$(& $enc $meta.subtitle)</div><h1>$(& $enc $meta.title)</h1></div>" +
             "<button type=""button"" id=""theme"" class=""ghost"" title=""Light / dark"">$(Get-Icon 'moon' 'icon-sm')</button></div>" +
             "<div class=""badges"">$badges</div><p class=""lead"">$lead</p>$content</header>"
@@ -312,7 +319,7 @@ td { padding: 11px 16px; border-bottom: 1px solid var(--cp-border); vertical-ali
 td:first-child { font-weight: 600; }
 tr:last-child td { border-bottom: 0; }
 tbody tr:hover td { background: var(--cp-accent-soft); }
-td code { white-space: nowrap; }
+td code { white-space: nowrap; } td code.long { white-space: normal; overflow-wrap: anywhere; }
 
 /* Code */
 .code { margin: 16px 0 20px; border: 1px solid var(--cp-border); border-radius: 12px; overflow: hidden; background: var(--cp-surface-soft); }

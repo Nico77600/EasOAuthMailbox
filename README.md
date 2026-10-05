@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-banner-dark.png">
-    <img alt="EAS OAuth Mailbox: a step-by-step diagnostic of Exchange ActiveSync with modern authentication through AD FS; it plays the device, Apple Mail on an iPhone included, and shows every request sent and every response received" src="docs/images/readme-banner-light.png">
+    <img alt="EAS OAuth Mailbox: a step-by-step diagnostic of Exchange ActiveSync with modern authentication through AD FS or Entra ID, on-premises or in Exchange Online; it plays the device, Apple Mail on an iPhone included, and shows every request sent and every response received" src="docs/images/readme-banner-light.png">
   </picture>
 </p>
 
@@ -10,8 +10,8 @@
   <a href="#how-it-works"><b>How it works</b></a> &nbsp;&middot;&nbsp;
   <a href="#apple-mail-on-an-iphone"><b>Apple Mail on an iPhone</b></a> &nbsp;&middot;&nbsp;
   <a href="#reports"><b>Reports</b></a> &nbsp;&middot;&nbsp;
-  <a href="#quick-start"><b>Quick start</b></a> &nbsp;&middot;&nbsp;
-  <a href="docs/EasOAuthMailbox-Guide.md"><b>Administrator guide</b></a>
+  <a href="#user-guide"><b>User guide</b></a> &nbsp;&middot;&nbsp;
+  <a href="#detailed-guide"><b>Detailed guide</b></a>
 </p>
 
 > [!IMPORTANT]
@@ -25,34 +25,35 @@
 
 ## Why
 
-Since Exchange Server 2019 CU13 and Exchange Server SE, ActiveSync devices can sign in with **OAuth through AD FS**, without any hybrid configuration. The path of a device crosses many parts that each fail in their own way: the HTTPS publishing, the AD FS application group (clients, Web API, scopes, issuance rules), the authorization server declared in Exchange, the **authentication policy of the user**, the ActiveSync mailbox policy, the mailbox itself. And a phone says almost nothing about the failure: *cannot connect*, or a password prompt instead of the AD FS page.
+Since Exchange Server 2019 CU13 and Exchange Server SE, ActiveSync devices can sign in with **OAuth**: through **AD FS** without any hybrid configuration, or through **Entra ID** with hybrid modern authentication (HMA) — and in **Exchange Online**, Entra ID is the only way. The path of a device crosses many parts that each fail in their own way: the HTTPS publishing, the authorization server (AD FS application group, or Entra ID tenant and Conditional Access), the server declared in Exchange, the **authentication policy of the user**, the ActiveSync mailbox policy, the mailbox itself. And a phone says almost nothing about the failure: *cannot connect*, or a password prompt instead of the sign-in page.
 
-This tool replays the same path from an administration workstation, **stage by stage**, and says for each check what works, what does not, and what to look at — with the request it sent and the response it received.
+This tool replays the same path from an administration workstation, **stage by stage**, with the three ways a device signs in — **OAuth with AD FS**, **OAuth with Entra ID**, **Basic** — and says for each check what works, what does not, and what to look at, with the request it sent and the response it received.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-principles-dark.png">
-  <img alt="What it answers, nine scenarios, what it produces, its safeguards" src="docs/images/readme-principles-light.png">
+  <img alt="Three ways to sign in: OAuth with AD FS (on-premises, Exchange 2019 CU13+ or SE), OAuth with Entra ID (hybrid modern authentication or Exchange Online), Basic (user name and password); and like a real device: nine scenarios, from Discovery to Full and AppleMail" src="docs/images/readme-principles-light.png">
 </picture>
 
 ## How it works
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-how-it-works-dark.png">
-  <img alt="The stages, always in this order: Discovery without sign-in, OAuth (AD FS device code and token claims), Endpoint (the token presented to ActiveSync), FolderSync with the ActiveSync policy, Identity and Inbox headers; four ways to use them: Discovery, Full, AppleMail and the HTTP trace" src="docs/images/readme-how-it-works-light.png">
+  <img alt="The stages, always in this order: Discovery without sign-in, OAuth (AD FS or Entra ID token: audience, scope, client, expiry), Endpoint (the token presented to ActiveSync), FolderSync with the ActiveSync policy, Identity and Inbox headers; four ways to use them: Discovery, Full, AppleMail and the HTTP trace" src="docs/images/readme-how-it-works-light.png">
 </picture>
 
-- **Before any sign-in** (`Discovery`): AD FS metadata, TLS certificates, the OAuth challenge of ActiveSync, a forged token that must be refused, and **whether Exchange gives the AD FS URL to the tested mailbox** — it does only when the authentication policy of the user allows modern authentication; otherwise the device falls back to a password.
-- **The token itself**: audience, `scp` (`EAS.AccessAsUser.All`), client and expiry are compared with what Exchange expects — the most frequent cause of HTTP 401.
+- **Before any sign-in** (`Discovery`): TLS certificates, the OAuth challenge of ActiveSync, AD FS metadata or the Entra ID tenant, a forged token that must be refused, and **which sign-in Exchange offers the tested mailbox** — AD FS, Entra ID, or none when the authentication policy of the user blocks modern authentication (the device then falls back to a password).
+- **A sign-in like a mail app**: a window (Microsoft Edge or Google Chrome, temporary profile) opens the AD FS or Entra ID page, and the password and the MFA are typed there. Where no window can open (Server Core, no browser, a policy), a device code is shown to type on any other device.
+- **The token itself**: audience, `scp` (`EAS.AccessAsUser.All`), client, tenant and expiry are compared with what Exchange expects — the most frequent cause of HTTP 401.
 - **The answer of Exchange**: HTTP status, ActiveSync status in the WBXML and the `x-ms-diagnostics` reason are kept as they are.
-- **Safe on a production organisation**: the ActiveSync policy is never acknowledged without `-AcknowledgePolicy` (it is downloaded for review, and the run stops as *Blocked*), a remote wipe is never acknowledged, and nothing is changed in AD FS or Exchange.
+- **Safe on a production organisation**: the ActiveSync policy is never acknowledged without `-AcknowledgePolicy` (it is downloaded for review, and the run stops as *Blocked*), a remote wipe is never acknowledged, and nothing is changed in AD FS, Entra ID or Exchange.
 
 ## Apple Mail on an iPhone
 
-The `AppleMail` scenario replays what an iPhone does when an Exchange account is added — from a trace of a real iPhone on Exchange Server SE with AD FS. **Only the address is needed**: the ActiveSync URL comes from Autodiscover, AD FS from the Exchange challenge, and the sign-in uses the AD FS client of the Apple Mail app (`f8d98a96-0999-43f5-8af3-69971c7bb423`) before ActiveSync 16.1 with the User-Agent and device type of an iPhone.
+The `AppleMail` scenario replays what an iPhone does when an Exchange account is added — from a trace of a real iPhone. **Only the address is needed**: the ActiveSync URL comes from Autodiscover, the sign-in server (AD FS or Entra ID) from the Exchange challenge, and the sign-in uses the client of the Apple Mail app with the redirect URI of the iPhone, before ActiveSync 16.1 with the User-Agent and device type of an iPhone.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-iphone-dark.png">
-  <img alt="Autodiscover gives the ActiveSync URL, a request with an empty Bearer header and the user identity gets a 401 with the AD FS authorization URL, the web view opens the AD FS page of the Apple Mail client, the code becomes a token, then ActiveSync 16.1 as an iPhone" src="docs/images/readme-iphone-light.png">
+  <img alt="Autodiscover gives the ActiveSync URL, a request with an empty header and the user identity gets a 401 that names the sign-in server, the web view opens the sign-in page of the Apple client, the code becomes a token, then ActiveSync 16.1 as an iPhone" src="docs/images/readme-iphone-light.png">
 </picture>
 
 ## Reports
@@ -60,56 +61,106 @@ The `AppleMail` scenario replays what an iPhone does when an Exchange account is
 <table>
   <tr>
     <td width="50%" valign="top"><a href="docs/images/eas-report-overview.png"><img alt="HTML report overview" src="docs/images/eas-report-overview.png"></a><br><sub><b>HTML report</b> &middot; result, checks passed, folders, Inbox headers, and what was tested</sub></td>
-    <td width="50%" valign="top"><a href="docs/images/eas-report-exchange.png"><img alt="A check with the request sent and the response received" src="docs/images/eas-report-exchange.png"></a><br><sub><b>Request sent, response received</b> &middot; for every check: headers, WBXML decoded, AD FS JSON; tokens masked</sub></td>
+    <td width="50%" valign="top"><a href="docs/images/eas-report-exchange.png"><img alt="A check with the request sent and the response received" src="docs/images/eas-report-exchange.png"></a><br><sub><b>Request sent, response received</b> &middot; for every check: headers, WBXML decoded, AD FS and Entra ID JSON; tokens masked</sub></td>
   </tr>
   <tr>
-    <td width="50%" valign="top"><a href="docs/images/eas-console-apple.png"><img alt="The AppleMail scenario in the console" src="docs/images/eas-console-apple.png"></a><br><sub><b>Console</b> &middot; the path of an iPhone, from the address to the Inbox headers</sub></td>
-    <td width="50%" valign="top"><a href="docs/images/eas-gui.png"><img alt="The window" src="docs/images/eas-gui.png"></a><br><sub><b>Window</b> &middot; choose a scenario, follow the progress, open the report</sub></td>
+    <td width="50%" valign="top"><a href="docs/images/eas-console-online.png"><img alt="A complete test of a mailbox in Exchange Online in the console" src="docs/images/eas-console-online.png"></a><br><sub><b>Console</b> &middot; a mailbox in Exchange Online, signed in with Entra ID, from the prerequisites to the Inbox headers</sub></td>
+    <td width="50%" valign="top"><a href="docs/images/eas-gui.png"><img alt="The window" src="docs/images/eas-gui.png"></a><br><sub><b>Window</b> &middot; choose the sign-in method and the scenario, follow the progress, open the report</sub></td>
   </tr>
 </table>
 
 Each run writes `Steps.csv` (one row per check), `Trace.csv` (every HTTP request and response), `Folders.csv`, `Messages.csv` (Inbox headers: date, sender, subject — no body, no attachment), `Policy.csv`, `Summary.json` and a self-contained HTML report.
 
-## Requirements
+## User guide
+
+What you need to run a test. The [detailed guide](#detailed-guide) goes further.
+
+### 1. Prerequisites
 
 | Item | Requirement |
 |---|---|
-| PowerShell | 7.4 or later, Windows (the window uses Windows Forms) |
-| Modules | None |
-| Exchange | Exchange Server 2019 CU13 or later, or Exchange Server Subscription Edition, configured for modern authentication with AD FS |
-| AD FS | Windows Server 2019 or later (device-code flow), the application group documented by Microsoft (native clients, one Web API per Exchange URL) |
-| Account | A **test mailbox** whose authentication policy allows modern authentication for ActiveSync |
+| Workstation | Windows 10 / 11 or Windows Server 2016 to 2025, **PowerShell 7.4** or later (7.5 or later for the Windows 11 look of the window). No module to install. |
+| Browser | Microsoft Edge or Google Chrome, for the sign-in window. Without one, a device code is shown instead. |
+| Network | HTTPS to the ActiveSync URL, and to AD FS or `login.microsoftonline.com` |
+| Account | A **test mailbox** and its password (and its MFA). From `FolderSync` on, Exchange registers an ActiveSync device partnership for it. |
 
-## Quick start
+And on the Exchange side, for the sign-in method you test:
+
+| Sign-in method | Exchange side |
+|---|---|
+| **OAuth - On-prem AD FS** | Exchange Server 2019 CU13+ or SE configured for modern authentication with AD FS (AD FS on Windows Server 2019 or later), and an authentication policy that allows it for the user |
+| **OAuth - Entra ID** | Exchange on-premises in hybrid with modern authentication (HMA) enabled, or a mailbox in Exchange Online |
+| **Basic - On-prem** | Basic authentication allowed on the ActiveSync virtual directory |
+
+### 2. Install
+
+1. Download `EasOAuthMailbox-<version>.zip` from the [latest release](https://github.com/Nico77600/EasOAuthMailbox/releases/latest) and extract it, for example in `C:\Tools`.
+2. Unblock the files (command at the top of this page).
+3. Open `config\EasOAuthMailbox.config.psd1` in Notepad and replace the `contoso.test` values: the test mailbox, the ActiveSync URL and, with AD FS, the AD FS URL. Every value can also be typed in the window or given on the command line.
+
+### 3. Run
+
+**The simplest: the window.**
 
 ```powershell
-git clone https://github.com/Nico77600/EasOAuthMailbox.git
-cd EasOAuthMailbox
-notepad .\config\EasOAuthMailbox.config.psd1             # AD FS URL, ActiveSync URL, test mailbox
-
-.\Invoke-EasOAuthMailbox.ps1 -TestType Discovery          # no sign-in: certificates, OAuth challenge, mailbox policy, forged token
-.\Invoke-EasOAuthMailbox.ps1 -TestType Endpoint           # is the AD FS token issued, then accepted by Exchange?
-.\Invoke-EasOAuthMailbox.ps1 -TestType Full -AcknowledgePolicy                                # acceptance of a test mailbox
-.\Invoke-EasOAuthMailbox.ps1 -TestType AppleMail -Mailbox eas-test@contoso.com -AcknowledgePolicy   # like an iPhone: only the address
-.\Invoke-EasOAuthMailbox.ps1 -Gui                         # the same in a window
+cd C:\Tools\EasOAuthMailbox-1.2.0
+.\Invoke-EasOAuthMailbox.ps1 -Gui
 ```
 
-The zip of each [release](https://github.com/Nico77600/EasOAuthMailbox/releases) contains only the files needed to run, with the HTML guide. Exit codes: `0` passed, `1` failed, `2` warnings or blocked.
+Choose the sign-in method, check the mailbox and the URLs, choose the scenario, then **Run the test**. With OAuth, a sign-in window opens: type the password and the MFA there.
 
-## Documentation
+**From the command line** — what is not given comes from the configuration file:
 
-The **administrator guide** covers the scenarios, the expected AD FS and Exchange configuration, every setting, each check with what to verify, the path of the iPhone, the reports and the HTTP trace, troubleshooting and the internals:
+```powershell
+# Without signing in: certificates, OAuth challenge, and which sign-in Exchange offers this mailbox
+.\Invoke-EasOAuthMailbox.ps1 -TestType Discovery -Mailbox eas-test@contoso.com
+
+# Complete test of a test mailbox, with each sign-in method
+.\Invoke-EasOAuthMailbox.ps1 -TestType Full -AcknowledgePolicy                          # OAuth - On-prem AD FS
+.\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authority EntraID -AcknowledgePolicy       # OAuth - Entra ID, Exchange on-premises (HMA)
+.\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authority EntraID -AcknowledgePolicy -EasUrl https://outlook.office365.com/Microsoft-Server-ActiveSync   # OAuth - Entra ID, Exchange Online
+.\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authentication Basic -AcknowledgePolicy    # Basic - On-prem (the password is asked)
+
+# Like an iPhone: only the address, the rest comes from Autodiscover and Exchange
+.\Invoke-EasOAuthMailbox.ps1 -TestType AppleMail -Mailbox eas-test@contoso.com -AcknowledgePolicy
+```
+
+Which scenario?
+
+| You want to... | Scenario |
+|---|---|
+| check the prerequisites before opening to users, or understand why nothing works | `Discovery` — no sign-in, nothing created |
+| know whether the token is issued, then accepted by Exchange | `Endpoint` |
+| accept a test mailbox from end to end | `Full` |
+| understand why an iPhone does not connect | `AppleMail` |
+
+Good to know:
+
+- Not sure where the user signs in? `-Authority Auto` goes where Exchange sends the user, like a client.
+- On a server without a browser, add `-SignIn DeviceCode`: type the code on any other device (a private window if the browser is signed in with another account).
+- Without `-AcknowledgePolicy`, when Exchange requires a policy, it is only downloaded for review and the run stops as *Blocked*.
+
+### 4. Read the result
+
+- The console shows each check as it runs, then the verdict and the path of the report.
+- The report is `reports\EasOAuthMailbox_<scenario>_<date>\EasOAuthMailbox.html`: each check that fails says what to look at, with the request sent and the response received. The CSV and JSON files are next to it.
+- Exit code: `0` passed, `1` failed, `2` warnings or blocked.
+- Exchange then lists the test device: `Get-MobileDevice -Mailbox <mailbox>`; remove it with `Remove-MobileDevice` once the test is over.
+
+## Detailed guide
+
+For developers, and to go further in troubleshooting. The detailed guide covers the three sign-in methods with the AD FS, Entra ID and Exchange configuration they expect, every setting, each check with what to verify, the path of the iPhone, the reports and the HTTP trace, troubleshooting, the architecture of the module, the tests and how to evolve the tool:
 
 - [docs/EasOAuthMailbox-Guide.md](docs/EasOAuthMailbox-Guide.md)
-- `docs/EasOAuthMailbox-Guide.html` — the same guide as a single HTML file (download it and open it locally)
-
-## Tests
+- `docs/EasOAuthMailbox-Guide.html` — the same guide as a single HTML file, also in the zip of each release
 
 ```powershell
-.\Run-Tests.ps1          # Pester 6.1+, simulated AD FS and Exchange (WBXML built byte by byte), no connection
+.\Run-Tests.ps1                              # Pester 6.1+, simulated AD FS, Entra ID and Exchange (WBXML built byte by byte), no connection
+.\tools\New-DocumentationImages.ps1          # screenshots of the guide, rendered by the tool itself
+.\tools\Build-Documentation.ps1              # the HTML guide
+.\tools\New-ReadmeImages.ps1                 # the graphics of this page (light and dark)
+.\tools\New-EasOAuthMailboxPackage.ps1       # the release folder: run-time files and the HTML guide only
 ```
-
-`tools\New-DocumentationImages.ps1` renders the screenshots of the guide with the tool itself, `tools\Build-Documentation.ps1` rebuilds the HTML guide, `tools\New-ReadmeImages.ps1` renders the graphics of this page, and `tools\New-EasOAuthMailboxPackage.ps1` builds the release folder.
 
 ## License
 

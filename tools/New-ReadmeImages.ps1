@@ -30,7 +30,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.0.0  (from Message Trace Report 1.1.0)
+    Version : 1.2.0  (from Message Trace Report 1.1.0)
     Part of : EAS OAuth Mailbox (repository tool, not in the package)
 #>
 [CmdletBinding()]
@@ -229,7 +229,7 @@ $work = Join-Path ([IO.Path]::GetTempPath()) ('eas-readme-' + [guid]::NewGuid().
 New-Item -ItemType Directory -Path $work, $OutputFolder -Force | Out-Null
 $Script:assets = Get-ReadmeAssets -Root $root
 $iphone = $assets.Flows | Where-Object { ($_.Lines -join ' ') -match 'Autodiscover' } | Select-Object -First 1
-if ($assets.Cards.Count -lt 1 -or -not $iphone) { throw 'The guide must hold the cards block of the introduction and the flow of chapter 10.7 (Autodiscover).' }
+if ($assets.Cards.Count -lt 1 -or -not $iphone) { throw 'The guide must hold the cards block of the introduction and the flow of chapter 14.6 (Autodiscover).' }
 $mid = '&middot;'
 
 try {
@@ -239,13 +239,13 @@ try {
     $badges = @(
         "<span class=""badge badge-accent"">Version $($assets.Version)</span>"
         "<span class=""badge"">$(Get-ReadmeIcon 'terminal' 'icon-sm')PowerShell 7.4+</span>"
-        "<span class=""badge"">$(Get-ReadmeIcon 'server' 'icon-sm')Exchange 2019 CU13+ &middot; SE</span>"
-        "<span class=""badge"">$(Get-ReadmeIcon 'key' 'icon-sm')AD FS</span>"
+        "<span class=""badge"">$(Get-ReadmeIcon 'server' 'icon-sm')Exchange 2019 &middot; SE &middot; Online</span>"
+        "<span class=""badge"">$(Get-ReadmeIcon 'key' 'icon-sm')AD FS &middot; Entra ID</span>"
         "<span class=""badge"">$(Get-ReadmeIcon 'tag' 'icon-sm')MIT license</span>"
     ) -join ''
     $banner = "<header class=""hero rb-hero""><div class=""rb-hero-grid""><div>" +
-        "<div class=""hero-top""><div class=""hero-logo"">$(Get-ReadmeIcon 'phone')</div><div><div class=""eyebrow"">Exchange ActiveSync $mid OAuth with AD FS $mid PowerShell</div><h1>EAS OAuth Mailbox</h1></div></div>" +
-        "<p class=""lead"">A <strong>step-by-step diagnostic</strong> of Exchange ActiveSync with modern authentication through AD FS: it plays the device, <strong>Apple Mail on an iPhone</strong> included, and shows <strong>every request sent and every response received</strong>.</p>" +
+        "<div class=""hero-top""><div class=""hero-logo"">$(Get-ReadmeIcon 'phone')</div><div><div class=""eyebrow"">Exchange ActiveSync $mid AD FS $mid Entra ID $mid Basic</div><h1>EAS OAuth Mailbox</h1></div></div>" +
+        "<p class=""lead"">A <strong>step-by-step diagnostic</strong> of Exchange ActiveSync with modern authentication through AD FS or Entra ID, on-premises or in Exchange Online: it plays the device, <strong>Apple Mail on an iPhone</strong> included, and shows <strong>every request sent and every response received</strong>.</p>" +
         "<div class=""badges"">$badges</div></div>" +
         "<div class=""rb-stats"">" +
         "<div class=""rb-stat""><b>9</b><span><strong>scenarios</strong>from no sign-in to a full sync</span></div>" +
@@ -260,8 +260,8 @@ try {
     # How it works: the stages as a vertical pipeline, and four ways to use them.
     $stages = @(
         'search | Discovery | no sign-in: certificates, OAuth challenge, OAuth for the mailbox, forged token'
-        'arrow | sign in | AD FS device code'
-        'key | OAuth | token claims: audience, scope, client, expiry'
+        'arrow | sign in | window: password, MFA'
+        'key | OAuth | AD FS or Entra ID token: audience, scope, client, expiry'
         'arrow | Bearer token |'
         'server | Endpoint | the token presented to ActiveSync'
         'arrow | provisioning | only when authorised'
@@ -270,17 +270,17 @@ try {
         'mail | Identity · InboxSync | the user Exchange sees, Inbox headers'
     )
     $uses = @(
-        [pscustomobject]@{ Icon = 'search'; Name = 'Discovery'; Chip = '<span class="rb-chip">no sign-in</span>'; Text = 'Before opening the flow to a pilot: publishing, certificates, <strong>does Exchange give the AD FS URL to this mailbox?</strong>'; Pills = (Get-ReadmePill 'TLS' 'teal') + (Get-ReadmePill 'Authentication policy' 'info') }
+        [pscustomobject]@{ Icon = 'search'; Name = 'Discovery'; Chip = '<span class="rb-chip">no sign-in</span>'; Text = 'Before opening the flow to a pilot: publishing, certificates, <strong>which sign-in does Exchange offer this mailbox?</strong>'; Pills = (Get-ReadmePill 'TLS' 'teal') + (Get-ReadmePill 'Authentication policy' 'info') }
         [pscustomobject]@{ Icon = 'check'; Name = 'Full'; Chip = '<span class="rb-chip hot">acceptance</span>'; Text = 'Every stage, in order, on a test mailbox: the path of a mobile device <strong>from end to end</strong>.'; Pills = (Get-ReadmePill 'Policy reviewed first' 'warning') + (Get-ReadmePill 'Folders · Inbox' 'success') }
-        [pscustomobject]@{ Icon = 'phone'; Name = 'AppleMail'; Chip = '<span class="rb-chip">like an iPhone</span>'; Text = 'Only the address: Autodiscover, AD FS from Exchange, <strong>the Apple Mail client</strong>, ActiveSync 16.1 as an iPhone.'; Pills = (Get-ReadmePill 'f8d98a96-…' 'violet') + (Get-ReadmePill 'DeviceType iPhone' 'info') }
-        [pscustomobject]@{ Icon = 'file'; Name = 'HTTP trace'; Chip = '<span class="rb-chip">every scenario</span>'; Text = 'Under each check, <strong>the request sent and the response received</strong>: headers, WBXML decoded, AD FS JSON.'; Pills = (Get-ReadmePill 'Tokens masked' 'success') + (Get-ReadmePill 'Trace.csv' 'teal') }
+        [pscustomobject]@{ Icon = 'phone'; Name = 'AppleMail'; Chip = '<span class="rb-chip">like an iPhone</span>'; Text = 'Only the address: Autodiscover, AD FS or Entra ID from Exchange, <strong>the Apple Mail client</strong>, ActiveSync 16.1 as an iPhone.'; Pills = (Get-ReadmePill 'f8d98a96-…' 'violet') + (Get-ReadmePill 'DeviceType iPhone' 'info') }
+        [pscustomobject]@{ Icon = 'file'; Name = 'HTTP trace'; Chip = '<span class="rb-chip">every scenario</span>'; Text = 'Under each check, <strong>the request sent and the response received</strong>: headers, WBXML decoded, AD FS and Entra ID JSON.'; Pills = (Get-ReadmePill 'Tokens masked' 'success') + (Get-ReadmePill 'Trace.csv' 'teal') }
     )
     $useHtml = ($uses | ForEach-Object { "<div class=""card-item""><div class=""card-icon"">$(Get-ReadmeIcon $_.Icon)</div><div><div class=""card-title"">$($_.Name) $($_.Chip)</div><div class=""card-text"">$($_.Text)</div><div>$($_.Pills)</div></div></div>" }) -join ''
     $howItWorks = "<div class=""rb-hiw""><div class=""rb-col""><div class=""rb-caption"">The stages <span>$mid always in this order</span></div>$(ConvertTo-ReadmeFlow $stages -Vertical)</div>" +
-        "<div class=""rb-col""><div class=""rb-caption"">Four ways to use them <span>$mid read-only for AD FS and Exchange</span></div><div class=""rb-modes"">$useHtml</div></div></div>"
+        "<div class=""rb-col""><div class=""rb-caption"">Four ways to use them <span>$mid read-only for AD FS, Entra ID and Exchange</span></div><div class=""rb-modes"">$useHtml</div></div></div>"
     New-ReadmeGraphic -Name 'how-it-works' -Body $howItWorks -Width 1080
 
-    # The path of an iPhone: the flow of chapter 10.7.
+    # The path of an iPhone: the flow of chapter 14.6.
     $iphoneHtml = "<div class=""rb-caption"">Apple Mail on an iPhone <span>$mid recorded on a lab, replayed by the AppleMail scenario</span></div>$(ConvertTo-ReadmeFlow $iphone.Lines)"
     New-ReadmeGraphic -Name 'iphone' -Body $iphoneHtml -Width 1080
 

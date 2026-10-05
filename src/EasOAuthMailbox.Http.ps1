@@ -13,13 +13,14 @@
     shows, for every check, what the client sent and what it received.
 
     Secrets never reach the trace: access, refresh and ID tokens, device and authorization codes,
-    cookies are replaced by their length. The forged token of the Discovery check is shown: it is
+    cookies are replaced by their length; for Basic authentication only the user name is shown,
+    never the password. The forged token of the Discovery check is shown: it is
     not a secret. Mailbox data (folder names, addresses, Inbox headers) is shown like in the rest
     of the report.
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.0.0
+    Version : 1.2.0
 #>
 
 # Exchanges of the current run (List of objects), $null outside a run. Stage: current stage.
@@ -91,12 +92,19 @@ function Invoke-EomHttp {
 }
 
 function Protect-EomHeaderValue {
-    <# Header value as written to the trace: tokens and cookies replaced by their length. #>
+    <# Header value as written to the trace: tokens and cookies replaced by their length, Basic password never shown. #>
     param([Parameter(Mandatory = $true)][string]$Name, [AllowEmptyString()][string]$Value)
 
     if ($Name -ieq 'Authorization') {
         $parts = $Value.Trim().Split(' ', 2)
         if ($parts.Count -lt 2 -or [string]::IsNullOrWhiteSpace($parts[1])) { return $Value }
+        if ($parts[0] -ieq 'Basic') {
+            # The user name helps to read the trace; the password never leaves memory.
+            $decoded = $null
+            try { $decoded = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($parts[1].Trim())) } catch { $decoded = $null }
+            if ($decoded -and $decoded.Contains(':')) { return "Basic <user $($decoded.Split(':', 2)[0]), password never written>" }
+            return "Basic <credentials: $($parts[1].Length) characters, never written>"
+        }
         if ($parts[1] -eq $script:InvalidToken) { return $Value }
         return "$($parts[0]) <access token: $($parts[1].Length) characters, never written>"
     }
@@ -325,6 +333,10 @@ function Add-EomTraceExchange {
     if ($Request.RequestUri.AbsolutePath -match 'Microsoft-Server-ActiveSync') {
         if (-not $auth) { $hints.Add('no credentials') }
         elseif (-not $auth.Parameter) { $hints.Add("empty $($auth.Scheme) header") }
+        elseif ($auth.Scheme -ieq 'Basic') {
+            $wrong = (Protect-EomHeaderValue -Name 'Authorization' -Value "Basic $($auth.Parameter)") -like "Basic <user $($script:InvalidBasicUserPrefix)*"
+            $hints.Add($(if ($wrong) { 'wrong user name and password' } else { 'user name and password (Basic)' }))
+        }
         elseif ($auth.Parameter -eq $script:InvalidToken) { $hints.Add('forged token') }
         else { $hints.Add('access token') }
     }

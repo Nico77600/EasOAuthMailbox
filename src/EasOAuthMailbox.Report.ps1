@@ -17,7 +17,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.0.0
+    Version : 1.2.0
 #>
 
 $script:ReportColumns = [ordered]@{
@@ -134,7 +134,8 @@ function Export-EomReport {
 
     if ($Formats -contains 'Html') {
         $summary = [ordered]@{}
-        foreach ($key in 'Tool', 'Version', 'Status', 'TestType', 'Scenario', 'StartedUtc', 'CompletedUtc', 'DurationSeconds', 'Mailbox', 'Client', 'ClientId', 'UserAgent', 'ProtocolVersion', 'DeviceId', 'AdfsUrlSource', 'EasUrlSource',
+        foreach ($key in 'Tool', 'Version', 'Status', 'TestType', 'Scenario', 'StartedUtc', 'CompletedUtc', 'DurationSeconds', 'Mailbox', 'Authentication', 'BasicUser', 'Client', 'ClientId', 'UserAgent', 'ProtocolVersion', 'DeviceId', 'AdfsUrlSource', 'EasUrlSource',
+            'Authority', 'AuthorityUrl', 'AuthoritySource', 'TenantId', 'SignIn',
             'DeviceType', 'AdfsUrl', 'EasUrl', 'PolicyAcknowledged', 'MoreAvailable', 'Identity', 'Token', 'Counts', 'Error') {
             $summary[$key] = Get-EomField $Result $key
         }

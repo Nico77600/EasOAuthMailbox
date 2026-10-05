@@ -22,11 +22,11 @@
 
 .EXAMPLE
     .\tools\New-EasOAuthMailboxPackage.ps1
-    Creates ..\package\EasOAuthMailbox-1.0.0.
+    Creates ..\package\EasOAuthMailbox-1.2.0.
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.0.0
+    Version : 1.2.0
 #>
 #Requires -Version 7.4
 [CmdletBinding()]
@@ -76,7 +76,7 @@ foreach ($name in 'reports', 'logs', 'tests', 'artifacts', 'tools', 'docs\images
 }
 Get-ChildItem -LiteralPath $Destination -Recurse -File -Include '*.log', '*.csv', '*.json', '*.png', '*.Tests.ps1', '*Simulator*' |
     ForEach-Object { $problems.Add("Not a run-time file: $($_.Name)") }
-foreach ($part in 'Console', 'Config', 'Http', 'Core', 'Checks', 'Report', 'Gui') {
+foreach ($part in 'Console', 'Config', 'Http', 'Core', 'Checks', 'Browser', 'Report', 'Gui') {
     if (-not (Test-Path -LiteralPath (Join-Path $Destination "src\EasOAuthMailbox.$part.ps1"))) { $problems.Add("Missing in the package: src\EasOAuthMailbox.$part.ps1") }
 }
 $config = [IO.File]::ReadAllText((Join-Path $Destination 'config\EasOAuthMailbox.config.psd1'))
@@ -94,6 +94,6 @@ Write-Host "  EAS OAuth Mailbox $version - package ready" -ForegroundColor Green
 Write-Host "  Folder   : $Destination"
 Write-Host ("  Content  : {0} files, {1:N1} MB" -f $all.Count, (($all | Measure-Object Length -Sum).Sum / 1MB))
 Write-Host "  Check    : module loads, $expected scenarios, reports written under the package folder"
-Write-Host "  Config   : contoso.test example values - fill in Target before the first run (guide, chapter 7)"
+Write-Host "  Config   : contoso.test example values - fill in Target before the first run (guide, chapter 11)"
 Write-Host ''
 $all | Sort-Object FullName | ForEach-Object { '    {0,10:N0}  {1}' -f $_.Length, $_.FullName.Substring($Destination.Length + 1) }

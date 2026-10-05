@@ -10,13 +10,18 @@
 
         eas-console.png         console of a Full run (banner, the six stages, summary card)
         eas-console-apple.png   console of an AppleMail run (the path of the Mail app of an iPhone)
+        eas-console-basic.png   console of a Full run with Basic authentication (mailbox without OAuth)
+        eas-console-entra.png   console of a Full run with Entra ID (Exchange on-premises with HMA)
+        eas-console-online.png  console of a Full run with Entra ID against Exchange Online
         eas-gui.png             the window after a Full run, with its progress box
+        eas-gui-basic.png       the window after a Full run with Basic authentication, dark theme
         eas-report-overview.png header, tiles and scope of the HTML report
+        eas-report-basic.png    header, tiles and scope of the report of the Basic run
         eas-report-checks.png   the checks, grouped by stage
         eas-report-detail.png   the detail dialog of a check (token claims)
         eas-report-exchange.png a check with the request sent and the response received (HTTP trace)
 
-    The HTML pages are captured with Microsoft Edge (headless), the window with DrawToBitmap.
+    The HTML pages are captured with Microsoft Edge (headless), the window with RenderTargetBitmap (WPF).
     Run tools\Build-Documentation.ps1 afterwards: the guide embeds the images.
 
 .PARAMETER OutputFolder
@@ -27,7 +32,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.0.0
+    Version : 1.2.0
     Part of : EAS OAuth Mailbox (repository tool, not in the package)
 #>
 #Requires -Version 7.4
@@ -217,21 +222,99 @@ $appleRecords = & {
 } 6>&1
 Write-Host "  AppleMail result: $($script:AppleResult.Status), $($script:AppleResult.Steps.Count) checks"
 Save-Console $appleRecords '.\Invoke-EasOAuthMailbox.ps1 -TestType AppleMail -AcknowledgePolicy' 'eas-console-apple'
+
+# Basic: a mailbox without OAuth (legacy user); the password is typed at the prompt of Get-Credential.
+$basicState = New-SimState
+$basicState.RequireProvisioning = $true
+$basicState.CertificateDays = 21
+$basicState.MailboxOAuth = 'Blocked'
+$basicState.Folders = $state.Folders
+$basicState.Policy = $state.Policy
+$basicState.Messages = $state.Messages
+Install-SimExchange -Module $module -State $basicState
+$basicSettings = $settings.Clone()
+$basicSettings.Authentication = 'Basic'
+$basicSettings.TestType = 'Full'
+$basicSettings.DeviceId = ''
+$basicDisplayed = $basicSettings.Clone()
+$basicDisplayed.OutputPath = "$shown\reports"
+$basicUser = [string]$basicSettings.Mailbox
+$basicCredential = [pscredential]::new($basicUser, (ConvertTo-SecureString $basicState.BasicUsers[$basicUser] -AsPlainText -Force))
+$basicRecords = & {
+    Write-EomRunBanner -Settings $basicDisplayed -LogPath "$shown\logs\EasOAuthMailbox_20261002.log"
+    Write-EomItem Info "Basic authentication: password of $basicUser (UPN or DOMAIN\user), sent with every request and never written." -Icon Key
+    Write-Host ''
+    Write-Host 'PowerShell credential request'
+    Write-Host "EAS OAuth Mailbox - Basic authentication for $basicUser"
+    Write-Host "Password for user $($basicUser): *************"
+    $script:BasicResult = Invoke-EomMailboxTest -Configuration $basicSettings -TestType Full -Credential $basicCredential
+    Write-EomRunSummary -Result $script:BasicResult -ReportText "$shown\reports\EasOAuthMailbox_Full_20261002-152031\EasOAuthMailbox.html" -LogPath "$shown\logs\EasOAuthMailbox_20261002.log"
+} 6>&1
+Write-Host "  Basic result: $($script:BasicResult.Status), $($script:BasicResult.Steps.Count) checks"
+Save-Console $basicRecords '.\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authentication Basic -AcknowledgePolicy' 'eas-console-basic'
+$basicReport = Export-EomReport -Result $script:BasicResult -OutputPath (Join-Path $work 'reports-basic')
+
+# Hybrid modern authentication: Exchange sends the clients to Entra ID (tenant of the simulated organisation).
+$entraState = New-SimState
+$entraState.RequireProvisioning = $true
+$entraState.CertificateDays = 21
+$entraState.Authority = 'EntraID'
+$entraState.ValidToken = New-SimEntraToken
+$entraState.TokenPendingPolls = 1
+$entraState.Folders = $state.Folders
+$entraState.Policy = $state.Policy
+$entraState.Messages = $state.Messages
+Install-SimExchange -Module $module -State $entraState
+$entraSettings = $settings.Clone()
+$entraSettings.Authority = 'EntraID'
+$entraSettings.AdfsUrl = ''
+$entraSettings.TestType = 'Full'
+$entraDisplayed = $entraSettings.Clone()
+$entraDisplayed.OutputPath = "$shown\reports"
+$entraRecords = & {
+    Write-EomRunBanner -Settings $entraDisplayed -LogPath "$shown\logs\EasOAuthMailbox_20261003.log"
+    $script:EntraResult = Invoke-EomMailboxTest -Configuration $entraSettings -TestType Full
+    Write-EomRunSummary -Result $script:EntraResult -ReportText "$shown\reports\EasOAuthMailbox_Full_20261003-201846\EasOAuthMailbox.html" -LogPath "$shown\logs\EasOAuthMailbox_20261003.log"
+} 6>&1
+Write-Host "  Entra ID result: $($script:EntraResult.Status), $($script:EntraResult.Steps.Count) checks"
+Save-Console $entraRecords '.\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authority EntraID -AcknowledgePolicy' 'eas-console-entra'
+
+# Exchange Online: the same Entra ID sign-in, the URL of Exchange Online, ActiveSync 16.1 only.
+$onlineUrl = 'https://outlook.office365.com/Microsoft-Server-ActiveSync'
+$onlineState = New-SimState
+$onlineState.Online = $true
+$onlineState.ValidToken = New-SimEntraToken -Audience 'https://outlook.office365.com'
+$onlineState.Folders = $state.Folders
+$onlineState.Messages = $state.Messages
+Install-SimExchange -Module $module -State $onlineState
+$onlineSettings = $entraSettings.Clone()
+$onlineSettings.EasUrl = $onlineUrl
+$onlineDisplayed = $onlineSettings.Clone()
+$onlineDisplayed.OutputPath = "$shown\reports"
+$onlineRecords = & {
+    Write-EomRunBanner -Settings $onlineDisplayed -LogPath "$shown\logs\EasOAuthMailbox_20261005.log"
+    $script:OnlineResult = Invoke-EomMailboxTest -Configuration $onlineSettings -TestType Full
+    Write-EomRunSummary -Result $script:OnlineResult -ReportText "$shown\reports\EasOAuthMailbox_Full_20261005-153307\EasOAuthMailbox.html" -LogPath "$shown\logs\EasOAuthMailbox_20261005.log"
+} 6>&1
+Write-Host "  Exchange Online result: $($script:OnlineResult.Status), $($script:OnlineResult.Steps.Count) checks"
+Save-Console $onlineRecords ".\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authority EntraID -EasUrl $onlineUrl -AcknowledgePolicy" 'eas-console-online'
 Install-SimExchange -Module $module -State $state
 #endregion
 
 #region Report images -----------------------------------------------------------------------------
 $reportHtml = [IO.File]::ReadAllText($report.Files.Html)
 $reportHtml = $reportHtml.Replace([Net.WebUtility]::HtmlEncode($settings.OutputPath), "$shown\reports")
-function Save-ReportView([string]$Name, [string]$Css, [string]$Script, [int]$Height = 0) {
+$basicHtml = [IO.File]::ReadAllText($basicReport.Files.Html)
+function Save-ReportView([string]$Name, [string]$Css, [string]$Script, [int]$Height = 0, [string]$Html = $reportHtml) {
     # Height of the body itself: documentElement.scrollHeight is never smaller than the window.
     $measure = "document.body.setAttribute('data-h', Math.ceil(document.body.getBoundingClientRect().height));"
     $inject = "<style>$Css</style><script>window.addEventListener('load', () => { $Script; setTimeout(() => { $measure }, 50); });</script></body>"
     $page = Join-Path $work "$Name.html"
-    [IO.File]::WriteAllText($page, $reportHtml.Replace('</body>', $inject), [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($page, $Html.Replace('</body>', $inject), [Text.UTF8Encoding]::new($false))
     Save-Page $page $Name 1280 $Height
 }
 Save-ReportView 'eas-report-overview' 'section.block:nth-of-type(n+2), footer { display:none !important; } body { padding-bottom:8px; }' ''
+Save-ReportView 'eas-report-basic' 'section.block:nth-of-type(n+2), footer { display:none !important; } body { padding-bottom:8px; }' '' -Html $basicHtml
 Save-ReportView 'eas-report-checks' 'header, section.block:nth-of-type(1), section.block:nth-of-type(n+3), footer { display:none !important; } body { padding-top:20px; padding-bottom:8px; }' ''
 Save-ReportView 'eas-report-detail' 'body { min-height:820px; }' "Array.from(document.querySelectorAll('.timeline > li')).find(li => li.querySelector('.what').textContent === 'Token claims').click()" 820
 Save-ReportView 'eas-report-exchange' 'body { min-height:980px; } dialog { max-height:none; } .dialog-body { max-height:none; }' "Array.from(document.querySelectorAll('.timeline > li')).find(li => li.querySelector('.what').textContent === 'OAuth for the mailbox').click()" 980
@@ -239,28 +322,38 @@ Save-ReportView 'eas-report-exchange' 'body { min-height:980px; } dialog { max-h
 
 #region Window image -----------------------------------------------------------------------------
 Write-Host 'Window run (simulated Exchange)...'
-Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-$guiSettings = $settings.Clone()
-$window = New-EomTestForm -Configuration $guiSettings
-$form = $window.Form
-$form.StartPosition = 'Manual'
-$form.Location = [Drawing.Point]::new(-6000, -6000)
-$form.Show()
-[Windows.Forms.Application]::DoEvents()
-& $module { Invoke-EomGuiRun } 6>$null
-$log = $window.Controls.Log
-$log.Text = $log.Text.Replace($settings.OutputPath, "$shown\reports")
-$log.SelectionStart = 0
-$log.ScrollToCaret()
-foreach ($box in 'AdfsUrl', 'EasUrl', 'Mailbox', 'ClientId', 'DeviceId', 'MessageCount') { $window.Controls[$box].SelectionLength = 0 }
-[Windows.Forms.Application]::DoEvents()
-$bitmap = [Drawing.Bitmap]::new($form.Width, $form.Height)
-$form.DrawToBitmap($bitmap, [Drawing.Rectangle]::new(0, 0, $form.Width, $form.Height))
-$bitmap.Save((Join-Path $OutputFolder 'eas-gui.png'), [Drawing.Imaging.ImageFormat]::Png)
-Write-Host ("  {0,-26} {1} x {2}" -f 'eas-gui.png', $form.Width, $form.Height)
-$bitmap.Dispose()
-$form.Close()
-$form.Dispose()
+function Save-Window([hashtable]$Configuration, [string]$Name, [string]$Password, [string]$Theme = 'Light') {
+    $window = New-EomTestForm -Configuration $Configuration -Theme $Theme
+    $form = $window.Form
+    # Off screen, at its design size (the work area of this computer does not matter for the image).
+    $form.WindowStartupLocation = 'Manual'
+    $form.Left = -6000; $form.Top = -6000; $form.Width = 1180; $form.Height = 860
+    $form.ShowActivated = $false; $form.ShowInTaskbar = $false
+    $form.Show()
+    if ($Password) { $window.Controls.BasicPassword.Password = $Password }
+    & $module { Invoke-EomGuiRun } 6>$null
+    # Anonymised paths in the progress and the footer.
+    for ($i = 0; $i -lt $window.Items.Count; $i++) {
+        $item = $window.Items[$i]
+        if ($item.Text.Contains($Configuration.OutputPath)) { $copy = $item.PSObject.Copy(); $copy.Text = $item.Text.Replace($Configuration.OutputPath, "$shown\reports"); $window.Items[$i] = $copy }
+    }
+    $window.Controls.Footer.Text = $window.Controls.Footer.Text.Replace($Configuration.OutputPath, "$shown\reports")
+    $window.Controls.LogScroll.ScrollToHome()
+    & $module { Invoke-EomGuiPump }
+    $form.UpdateLayout()
+    $root = $form.Content
+    $bitmap = [Windows.Media.Imaging.RenderTargetBitmap]::new([int][Math]::Ceiling($root.ActualWidth), [int][Math]::Ceiling($root.ActualHeight), 96, 96, [Windows.Media.PixelFormats]::Pbgra32)
+    $bitmap.Render($root)
+    $encoder = [Windows.Media.Imaging.PngBitmapEncoder]::new()
+    $encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
+    $stream = [IO.File]::Create((Join-Path $OutputFolder "$Name.png"))
+    try { $encoder.Save($stream) } finally { $stream.Dispose() }
+    Write-Host ("  {0,-26} {1} x {2} ({3})" -f "$Name.png", $bitmap.PixelWidth, $bitmap.PixelHeight, $Theme)
+    $form.Close()
+}
+Save-Window $settings.Clone() 'eas-gui'
+Install-SimExchange -Module $module -State $basicState
+Save-Window $basicSettings.Clone() 'eas-gui-basic' $basicState.BasicUsers[$basicUser] -Theme Dark
 #endregion
 
 Remove-Module EasOAuthMailbox -Force

@@ -2,7 +2,7 @@
 <!--
     EAS OAuth Mailbox - HTML template
     Author  : Nicolas Fabert
-    Version : 1.0.0
+    Version : 1.2.0
     Export-EomReport (src\EasOAuthMailbox.Report.ps1) copies this file and replaces seven markers, each
     exactly once: TITLE (text), and SUMMARY, STEPS, FOLDERS, MESSAGES, POLICY, TRACE (JSON, in the
     script blocks at the end of the body). Everything else is static: texts, colours and tabs can be
@@ -155,7 +155,7 @@ footer { color:var(--cp-text-muted); font-size:12px; line-height:1.6; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition:none !important; } .tile:hover { transform:none; } }
 @media print { body { background:#fff; padding:0; } .tabs, .controls, dialog { display:none !important; } .scroll { max-height:none; overflow:visible; } section.block, header { break-inside:avoid; } }
 </style></head><body>
-<header><div class="hero-top"><div><span id="origin">EAS OAuth Mailbox</span><h1>ActiveSync OAuth diagnostic</h1>
+<header><div class="hero-top"><div><span id="origin">EAS OAuth Mailbox</span><h1 id="title">ActiveSync OAuth diagnostic</h1>
 <p class="subtitle" id="subtitle"></p></div>
 <div class="period"><span class="label">Execution</span><div id="period"></div></div></div>
 <div class="metrics">
@@ -179,7 +179,7 @@ footer { color:var(--cp-text-muted); font-size:12px; line-height:1.6; }
 <div class="scroll"><table><thead id="head"></thead><tbody id="rows"></tbody></table><p id="empty" hidden>No rows match the current filters.</p></div></section>
 <dialog id="detail"><div class="dialog-head"><h2 id="detail-title">Details</h2><button id="detail-close" type="button">Close</button></div><div class="dialog-body" id="detail-body"></div></dialog>
 <noscript>JavaScript is required to display this report. Open the CSV files of the same folder for the complete data.</noscript>
-<footer id="footer">Protect this file: it contains the mailbox, the addresses of the signed-in user and Inbox subjects. The access token is never written to it: in the HTTP trace, tokens, codes and cookies are replaced by their length.
+<footer id="footer">Protect this file: it contains the mailbox, the addresses of the signed-in user and Inbox subjects. The access token and the Basic password are never written to it: in the HTTP trace, tokens, codes and cookies are replaced by their length, and Basic credentials by the user name only.
 A passed step proves that step only, for this DeviceId and this account. FolderSync, provisioning, Settings and Sync can create an ActiveSync device partnership (Get-MobileDevice).</footer>
 <script id="data-summary" type="application/json">{{SUMMARY_JSON}}</script>
 <script id="data-steps" type="application/json">{{STEPS_JSON}}</script>
@@ -202,9 +202,11 @@ A passed step proves that step only, for this DeviceId and this account. FolderS
   const date = v => { const m = String(v || "").match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2}:\d{2})/); return m ? `${m[3]} ${months[+m[2]-1]} ${m[1]} ${m[4]} UTC` : text(v); };
   const statusClass = s => ({ Passed: "good", Warning: "warn", Blocked: "warn", Failed: "bad" })[s] || "";
   const dotClass = s => ({ Passed: "ok", Warning: "warn", Blocked: "warn", Failed: "bad", Skipped: "skip" })[s] || "";
-  const stageTitles = { Discovery: "Prerequisites without sign-in", AppleSetup: "Account setup like the iPhone (no sign-in)", OAuth: "AD FS sign-in and token", Endpoint: "ActiveSync endpoint with the token",
+  const stageTitles = { Discovery: "Prerequisites without sign-in", AppleSetup: "Account setup like the iPhone (no sign-in)", OAuth: summary.Authority === "EntraID" ? "Entra ID sign-in and token (hybrid modern authentication)" : "AD FS sign-in and token", Basic: "Basic authentication (user name and password)", Endpoint: summary.Authentication === "Basic" ? "ActiveSync endpoint with the user name and password" : "ActiveSync endpoint with the token",
     Provisioning: "ActiveSync policy", FolderSync: "Mailbox folders (FolderSync)", Identity: "Mailbox identity (Settings)", InboxSync: "Inbox headers (Sync)" };
   const colors = { Passed: "var(--cp-success)", Warning: "var(--cp-warning)", Blocked: "var(--cp-accent)", Failed: "var(--cp-danger)", Skipped: "var(--cp-border-strong)" };
+  const basic = summary.Authentication === "Basic";
+  const entra = !basic && summary.Authority === "EntraID";
   const counts = summary.Counts || {};
   const total = data.steps.length;
   const ran = new Set(data.steps.filter(s => s.Status !== "Skipped").map(s => s.Stage));
@@ -212,8 +214,9 @@ A passed step proves that step only, for this DeviceId and this account. FolderS
   const notPlanned = "Not part of this scenario";
 
   // ---- Header ---------------------------------------------------------------------------
-  el("origin").textContent = `EAS OAuth Mailbox / ${summary.TestType || ""}`;
-  el("subtitle").textContent = `${summary.Scenario || "Diagnostic"} for ${summary.Mailbox || "the mailbox"}. Each check says what works and what does not; the access token is never written to this report.`;
+  el("origin").textContent = `EAS OAuth Mailbox / ${summary.TestType || ""}${basic ? " / Basic" : (entra ? " / Entra ID" : "")}`;
+  el("title").textContent = basic ? "ActiveSync Basic diagnostic" : "ActiveSync OAuth diagnostic";
+  el("subtitle").textContent = `${summary.Scenario || "Diagnostic"} for ${summary.Mailbox || "the mailbox"}. Each check says what works and what does not; the ${basic ? "password" : "access token"} is never written to this report.`;
   el("period").innerHTML = "";
   [[date(summary.StartedUtc)], ["to " + date(summary.CompletedUtc)], [`${summary.DurationSeconds ?? "-"} s ${"\u00B7"} ${summary.Tool || "EAS OAuth Mailbox"} ${summary.Version || ""}`]]
     .forEach(line => el("period").appendChild(make("div", null, line[0])));
@@ -236,13 +239,13 @@ A passed step proves that step only, for this DeviceId and this account. FolderS
   const token = summary.Token || {}, identity = summary.Identity || {};
   const policyText = summary.PolicyAcknowledged ? "Acknowledged" : (data.policy.length ? "Downloaded, not acknowledged" : (planned.has("FolderSync") || planned.has("Provisioning") ? "Not required by Exchange" : notPlanned));
   [["Mailbox", summary.Mailbox, "Target of the test"],
-   ["Signed-in user", token.User || "-", token.ExpiresUtc ? `Token valid until ${date(token.ExpiresUtc)}` : (planned.has("OAuth") ? "Token claims not read" : "No sign-in in this scenario")],
+   ["Signed-in user", token.User || summary.BasicUser || "-", basic ? (summary.BasicUser ? "Basic authentication: user name and password" : "No sign-in in this scenario") : (token.ExpiresUtc ? `Token valid until ${date(token.ExpiresUtc)}` : (planned.has("OAuth") ? "Token claims not read" : "No sign-in in this scenario"))],
    ["Exchange primary address", identity.PrimarySmtpAddress || "-", identity.DisplayName || (planned.has("Identity") ? "Identity check not run" : notPlanned)],
    ["ActiveSync policy", policyText, data.policy.length ? `${data.policy.length} setting(s), Policy tab` : ""],
-   ["AD FS", summary.AdfsUrl || "Not found", [summary.AdfsUrlSource && summary.AdfsUrlSource !== "Configuration" ? `From the ${summary.AdfsUrlSource}` : "", token.Audience ? `Audience ${token.Audience}` : ""].filter(Boolean).join(" \u00B7 ")],
+   basic ? ["AD FS", "Not used", "Basic authentication: no AD FS, no token"] : entra ? ["Entra ID", summary.TenantId ? `Tenant ${summary.TenantId}` : "Tenant not found", [summary.AuthoritySource && summary.AuthoritySource !== "Configuration" ? `From the ${summary.AuthoritySource}` : "Hybrid modern authentication", token.Audience ? `Audience ${token.Audience}` : ""].filter(Boolean).join(" \u00B7 ")] : ["AD FS", summary.AdfsUrl || "Not found", [summary.AdfsUrlSource && summary.AdfsUrlSource !== "Configuration" ? `From the ${summary.AdfsUrlSource}` : "", token.Audience ? `Audience ${token.Audience}` : ""].filter(Boolean).join(" \u00B7 ")],
    ["ActiveSync", summary.EasUrl || "Not found", `${summary.EasUrlSource && summary.EasUrlSource !== "Configuration" ? `From ${summary.EasUrlSource} \u00B7 ` : ""}${summary.Client === "AppleMail" ? "Played as Apple Mail on an iPhone" : "Played as the tool"} \u00B7 protocol ${summary.ProtocolVersion || "-"}`],
    ["Device ID", summary.DeviceId, `Type ${summary.DeviceType || "-"} \u00B7 Get-MobileDevice -Mailbox <mailbox>`, "mono"],
-   ["Token scope", token.Scope || "-", token.ClientId ? `Client ${token.ClientId}` : ""]
+   basic ? ["Authentication", "Basic", "User name and password sent with every request, protected only by TLS"] : ["Token scope", token.Scope || "-", [token.ClientId ? `Client ${token.ClientId}` : "", { Window: "Sign-in window", DeviceCode: "Device code", Supplied: "Token supplied" }[summary.SignIn] || ""].filter(Boolean).join(" \u00B7 ")]
   ].forEach(([label, value, note, style]) => {
     const card = make("div", "scope-card"); card.append(make("span", null, label), make("strong", style || null, text(value) || "-"));
     if (note) card.appendChild(make("em", null, note));
@@ -369,7 +372,7 @@ A passed step proves that step only, for this DeviceId and this account. FolderS
       cols: [["Received", r => date(r.DateReceived)], ["From", r => r.From], ["Subject", r => r.Subject], ["Read", r => r.Read], ["Server ID", r => r.ServerId, "mono"]] },
     { key: "policy", title: "Policy", caption: "ActiveSync mailbox policy returned by Exchange during provisioning. Acknowledged only when authorised (Acknowledged in the Scope block).",
       cols: [["Setting", r => r.Setting], ["Value", r => r.Value]] },
-    { key: "trace", title: "HTTP trace", caption: "Every request the client sent and the response it received, in order (Trace.csv). Click a line for the request and the response in full. Tokens, codes and cookies are replaced by their length.",
+    { key: "trace", title: "HTTP trace", caption: "Every request the client sent and the response it received, in order (Trace.csv). Click a line for the request and the response in full. Tokens, codes and cookies are replaced by their length; for Basic, only the user name is shown, never the password.",
       cols: [["#", r => r.Sequence, "num"], ["Check", r => r.StepName], ["Method", r => r.Method], ["URL", r => r.Url, "mono"], ["Sent with", r => r.Label], ["Status", r => codeText(r)], ["Duration (ms)", r => r.DurationMs, "num"], ["Sent", r => r.Repeated, "num"], ["Time (UTC)", r => date(r.TimestampUtc)]],
       open: r => showExchange(r) }
   ];

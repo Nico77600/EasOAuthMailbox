@@ -13,7 +13,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.0.0
+    Version : 1.2.0
 #>
 
 $script:C = @{ Reset = ''; Bold = ''; Dim = ''; Accent = ''; AccentBg = ''; Green = ''; Yellow = ''; Red = ''; White = '' }
@@ -247,23 +247,44 @@ function Write-EomRunBanner {
     $banner = [ordered]@{}
     $banner['Scenario'] = @('Target', "$($scenario.Name) $dot $($scenario.DisplayName)")
     $banner['Mailbox'] = @('People', $Settings.Mailbox)
+    $basic = $client.Authentication -eq 'Basic'
+    if ($basic) {
+        # No AD FS: the user name and password go with every request.
+        $user = if ($client.BasicUser) { $client.BasicUser } else { $client.Mailbox }
+        $banner['Sign-in'] = @('Key', $(if ($scenario.SignIn) { "Basic $dot user $user $dot password never written" } else { "Basic $dot no credentials in this scenario" }))
+    }
     if ($client.Client -eq 'AppleMail') {
         # Like the iPhone: only the address is given, the rest is discovered.
-        $banner['AD FS'] = @('Key', 'found in the Exchange challenge, like the iPhone')
+        if (-not $basic) { $banner['Sign-in'] = @('Key', 'AD FS or Entra ID, found in the Exchange challenge, like the iPhone') }
         $banner['ActiveSync'] = @('Server', $(if ($client.EasUrl) { "Autodiscover (else $($client.EasUrl), as typed by hand)" } else { 'Autodiscover' }))
     }
     else {
-        $banner['AD FS'] = @('Key', $Settings.AdfsUrl)
+        if (-not $basic) {
+            $banner['Sign-in'] = switch ([string]$client.Authority) {
+                'EntraID' {
+                    $where = if (Test-EomExchangeOnlineUrl -Url ([string]$Settings.EasUrl)) { 'Exchange Online' } else { 'Exchange on-premises (HMA)' }
+                    @('Key', "Entra ID $dot $where $dot tenant $(if ($client.TenantId) { $client.TenantId } else { "of $(([string]$client.Mailbox).Split('@')[-1])" })")
+                }
+                'Auto' { @('Key', 'the server Exchange names in its challenge (AD FS or Entra ID), like a client') }
+                default { @('Key', "AD FS $dot $($Settings.AdfsUrl)") }
+            }
+        }
         $banner['ActiveSync'] = @('Server', $Settings.EasUrl)
     }
-    if ($client.Client -eq 'AppleMail') { $banner['Client'] = @('Key', "Apple Mail $dot $($client.ClientId) $dot $($client.UserAgent) $dot EAS $($client.ProtocolVersion)") }
+    if (-not $basic -and $scenario.SignIn -and $banner.Contains('Sign-in')) {
+        # Window or device code, as decided for this session (Test.SignIn Auto: the window when possible).
+        $how = try { if ((Get-EomSignInMode -Configuration $client).Mode -eq 'Window') { 'sign-in window' } else { 'device code' } } catch { 'sign-in window not available here' }
+        $banner['Sign-in'] = @('Key', "$($banner['Sign-in'][1]) $dot $how")
+    }
+    if ($client.Client -eq 'AppleMail') { $banner['Client'] = @('Key', "Apple Mail $dot $(if ($basic) { 'password (Basic)' } else { $client.ClientId }) $dot $($client.UserAgent) $dot EAS $($client.ProtocolVersion)") }
     $banner['Device'] = @('Settings', "$($client.DeviceType) $dot $device")
     if ($scenario.CanProvision) {
         $banner['Policy'] = @('Shield', $(if ($Settings.AcknowledgePolicy) { 'acknowledgement AUTHORISED (test mailbox)' } else { 'downloaded for review only, not acknowledged' }))
     }
     $banner['Report'] = @('Report', $(if ($NoReport) { 'none (-NoReport)' } else { $Settings.OutputPath }))
     if ($LogPath) { $banner['Log'] = @('Log', $LogPath) }
-    Write-EomBanner -Title 'EAS OAuth Mailbox' -Subtitle "Exchange ActiveSync $dot OAuth with AD FS $dot step-by-step diagnostic" -Details $banner
+    $subtitle = if ($basic) { 'Basic sign-in' } elseif ($client.Client -eq 'AppleMail' -or $client.Authority -eq 'Auto') { 'OAuth' } elseif ($client.Authority -eq 'EntraID') { 'OAuth with Entra ID' } else { 'OAuth with AD FS' }
+    Write-EomBanner -Title 'EAS OAuth Mailbox' -Subtitle "Exchange ActiveSync $dot $subtitle $dot step-by-step diagnostic" -Details $banner
 }
 
 function Write-EomRunSummary {
@@ -284,7 +305,10 @@ function Write-EomRunSummary {
     $values['Report'] = @('Report', $ReportText)
     if ($LogPath) { $values['Log'] = @('Log', $LogPath) }
     $values['Next'] = @('Info', $(switch ($Result.Status) {
-                'Passed' { 'Nothing to do. Exchange lists the test device: Get-MobileDevice -Mailbox <mailbox>.' }
+                'Passed' {
+                    if ((Get-EomTestCatalog | Where-Object Name -eq $Result.TestType).ChangesServerState) { 'Nothing to do. Exchange lists the test device: Get-MobileDevice -Mailbox <mailbox>.' }
+                    else { 'Nothing to do. No device partnership was created.' }
+                }
                 'Blocked' { 'Review the policy (Policy tab of the report), then run again with -AcknowledgePolicy on a test mailbox.' }
                 'Warning' { 'Read the warnings in the report: each one gives the cause and what to check.' }
                 default { 'Open the report: the first Failed step gives the HTTP status and the Exchange diagnostics.' }

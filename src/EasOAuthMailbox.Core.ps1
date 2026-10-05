@@ -10,7 +10,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.0.0
+    Version : 1.2.0
 #>
 function Read-WbxmlMultiByteInteger {
     param(
@@ -473,6 +473,9 @@ function Assert-EasStatus {
     }
 
     switch ($numericStatus) {
+        138 {
+            throw "$Command reports ActiveSync status 138: Exchange does not support the protocol version of the request (MS-ASProtocolVersion)."
+        }
         139 {
             throw "$Command reports ActiveSync status 139: the device cannot fully comply with the mailbox policy."
         }
@@ -503,13 +506,16 @@ function New-EasRequestMessage {
     <#
         The HTTP request of Invoke-EasRequest. Authorization header: "Bearer <token>" with AccessToken,
         "Bearer" alone with EmptyBearer (what a client sends to discover OAuth: Exchange returns its
-        Bearer challenge only to such a request), none otherwise (anonymous request).
+        Bearer challenge only to such a request), none otherwise (anonymous request). With Credential: "Basic" and the
+        base64 of user:password.
     #>
     param(
         [Parameter(Mandatory = $true)][Net.Http.HttpMethod]$Method,
         [Parameter(Mandatory = $true)][string]$Uri,
         [AllowEmptyString()][string]$AccessToken,
         [switch]$EmptyBearer,
+        # Basic authentication: sent with the request, never written (see Protect-EomHeaderValue).
+        [pscredential]$Credential,
         [byte[]]$Body,
         [string]$PolicyKey = '0',
         # Extra headers (X-User-Identity for the OAuth discovery of a mailbox).
@@ -521,6 +527,11 @@ function New-EasRequestMessage {
     $request = [Net.Http.HttpRequestMessage]::new($Method, $Uri)
     if (-not [string]::IsNullOrEmpty($AccessToken)) {
         $request.Headers.Authorization = [Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $AccessToken)
+    }
+    elseif ($Credential) {
+        # UTF-8, like the mobile clients; sent at once (no first anonymous request), like ActiveSync devices.
+        $pair = '{0}:{1}' -f $Credential.UserName, $Credential.GetNetworkCredential().Password
+        $request.Headers.Authorization = [Net.Http.Headers.AuthenticationHeaderValue]::new('Basic', [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($pair)))
     }
     elseif ($EmptyBearer) {
         $request.Headers.Authorization = [Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer')
@@ -558,6 +569,8 @@ function Invoke-EasRequest {
 
         [switch]$EmptyBearer,
 
+        [pscredential]$Credential,
+
         [byte[]]$Body,
 
         [string]$PolicyKey = '0',
@@ -567,7 +580,7 @@ function Invoke-EasRequest {
         [string]$UserAgent
     )
 
-    $request = New-EasRequestMessage -Method $Method -Uri $Uri -AccessToken $AccessToken -EmptyBearer:$EmptyBearer -Body $Body -PolicyKey $PolicyKey -Headers $Headers -UserAgent $UserAgent
+    $request = New-EasRequestMessage -Method $Method -Uri $Uri -AccessToken $AccessToken -EmptyBearer:$EmptyBearer -Credential $Credential -Body $Body -PolicyKey $PolicyKey -Headers $Headers -UserAgent $UserAgent
 
     try {
         # Status, headers, WWW-Authenticate challenges one by one and raw body (Send-EomHttpRequest).
@@ -599,14 +612,32 @@ function Assert-EasHttpResponse {
 
     $diagnostics = Get-EasDiagnostics -Response $Response
     $suffix = if ($diagnostics) { " Exchange diagnostics: $diagnostics" } else { '' }
+    $refused = if ($script:EomAuthentication -eq 'Basic') {
+        'Exchange refused the user name and password (wrong password, locked account, Basic disabled on the ActiveSync virtual directory, or blocked by the authentication policy of the user).'
+    }
+    else { 'Exchange did not accept the OAuth token.' }
     switch ($Response.StatusCode) {
         200 { return }
-        401 { throw "$Command returned HTTP 401: Exchange did not accept the OAuth token.$suffix" }
+        401 { throw "$Command returned HTTP 401: $refused$suffix" }
         403 { throw "$Command returned HTTP 403: the user or the test device is blocked for ActiveSync.$suffix" }
         449 { throw "$Command returned HTTP 449: ActiveSync provisioning is required or Exchange rejected the policy key.$suffix" }
-        451 { throw "$Command returned HTTP 451: Exchange redirects this mailbox to another ActiveSync URL ($(Get-EasRedirectLocation -Response $Response)). Test that URL.$suffix" }
+        451 { throw "$Command returned HTTP 451: Exchange redirects this mailbox to another ActiveSync URL ($(Get-EasRedirectLocation -Response $Response)): $(Get-EasRedirectAdvice -Response $Response)$suffix" }
         default { throw "$Command returned HTTP $($Response.StatusCode).$suffix" }
     }
+}
+
+function Get-EasRedirectAdvice {
+    <#
+        What to do after an HTTP 451: in hybrid, Exchange on-premises sends the devices of a mailbox
+        moved to Exchange Online to the URL of Exchange Online, where they sign in with Entra ID.
+    #>
+    param([Parameter(Mandatory = $true)][pscustomobject]$Response)
+
+    $location = Get-EasRedirectLocation -Response $Response
+    if (Test-EomExchangeOnlineUrl -Url $location) {
+        return "the mailbox is in Exchange Online, devices are sent there. Test it with -EasUrl $(([string]$location).TrimEnd('/')) and Entra ID (-Authority EntraID)."
+    }
+    return 'test that URL.'
 }
 
 function Get-EasRedirectLocation {
@@ -677,8 +708,11 @@ function Invoke-EasProvision {
         [Parameter(Mandatory = $true)]
         [string]$DeviceType,
 
-        [Parameter(Mandatory = $true)]
+        # The token (OAuth) or the credential (Basic) of the run.
+        [AllowEmptyString()]
         [string]$AccessToken,
+
+        [pscredential]$Credential,
 
         [switch]$Acknowledge
     )
@@ -686,7 +720,7 @@ function Invoke-EasProvision {
     $provisionUri = '{0}?Cmd=Provision&User={1}&DeviceId={2}&DeviceType={3}' -f $EasUrl.TrimEnd('/'), $EncodedUser, $DeviceId, $DeviceType
 
     $initial = Invoke-EasRequest -HttpClient $HttpClient -Method ([Net.Http.HttpMethod]::Post) -Uri $provisionUri `
-        -AccessToken $AccessToken -Body (New-EasProvisionRequest) -PolicyKey '0'
+        -AccessToken $AccessToken -Credential $Credential -Body (New-EasProvisionRequest) -PolicyKey '0'
     $policy = Get-EasProvisionRoot -Response $initial -Command 'Provision (policy download)'
 
     $policyType = Get-ChildText -Node $policy -Name 'PolicyType'
@@ -714,7 +748,7 @@ function Invoke-EasProvision {
     $finalKey = $null
     if ($Acknowledge) {
         $acknowledgement = Invoke-EasRequest -HttpClient $HttpClient -Method ([Net.Http.HttpMethod]::Post) -Uri $provisionUri `
-            -AccessToken $AccessToken -Body (New-EasProvisionRequest -TemporaryPolicyKey $temporaryKey) -PolicyKey $temporaryKey
+            -AccessToken $AccessToken -Credential $Credential -Body (New-EasProvisionRequest -TemporaryPolicyKey $temporaryKey) -PolicyKey $temporaryKey
         $finalPolicy = Get-EasProvisionRoot -Response $acknowledgement -Command 'Provision (acknowledgement)'
         $finalKey = Get-ChildText -Node $finalPolicy -Name 'PolicyKey'
         if ([string]::IsNullOrWhiteSpace($finalKey)) {
