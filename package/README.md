@@ -43,14 +43,15 @@ This folder contains everything needed to run the tool: `Invoke-EasOAuthMailbox.
 | `EasOAuthMailbox.psd1` | Module manifest. |
 | `EasOAuthMailbox.psm1` | Module loader. |
 | `config\` | Example configuration. |
-| `docs\` | User and developer guide files. |
+| `docs\` | User and developer guides, Markdown and self-contained HTML, with images. |
 | `src\` | Module implementation. |
 | `templates\` | HTML report template. |
 | `LICENSE` | MIT license. |
 | `THIRD-PARTY-NOTICES.md` | Third-party notices. |
 
 ## Documentation
-- [User guide](docs/EasOAuthMailbox-Guide.md) - also `docs/EasOAuthMailbox-Guide.html`, a single file to open locally
+- [User guide](docs/EasOAuthMailbox-UserGuide.md) - also `docs/EasOAuthMailbox-UserGuide.html`, a single file to open locally
+- [Developer guide](docs/EasOAuthMailbox-Guide.md) - also `docs/EasOAuthMailbox-Guide.html`
 
 Project page, releases and change log: https://github.com/Nico77600/EasOAuthMailbox
 

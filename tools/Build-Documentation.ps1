@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
-    Builds package\docs\EasOAuthMailbox-Guide.html from package\docs\EasOAuthMailbox-Guide.md.
+    Builds package\docs\EasOAuthMailbox-UserGuide.html and package\docs\EasOAuthMailbox-Guide.html
+    from their Markdown sources.
 
 .DESCRIPTION
-    The Markdown guide stays readable as plain text (and on GitHub / Azure DevOps). This script
-    turns it into a structured, self-contained HTML page:
+    The Markdown guides stay readable as plain text (and on GitHub / Azure DevOps). This script
+    turns each of them into a structured, self-contained HTML page:
 
       - hero header (title, version, author, date) built from the front matter,
       - sticky sidebar with the parts and chapters, highlighting the chapter being read,
@@ -24,6 +25,8 @@
     Section icons: put <!-- icon: name --> on the line before a "## " heading. Available names
     are the keys of $Icons below; add an SVG path there to add an icon.
 
+    Without -Source, both guides are built, user guide first.
+
 .NOTES
     Author  : Nicolas Fabert
     Version : 1.2.1
@@ -33,11 +36,18 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
-    [string]$Source = (Join-Path $PSScriptRoot '..\package\docs\EasOAuthMailbox-Guide.md'),
-    [string]$Destination = (Join-Path $PSScriptRoot '..\package\docs\EasOAuthMailbox-Guide.html')
+    [string]$Source,
+    [string]$Destination
 )
 $ErrorActionPreference = 'Stop'
+if (-not $Source) {
+    foreach ($name in 'EasOAuthMailbox-UserGuide', 'EasOAuthMailbox-Guide') {
+        & $PSCommandPath -Source (Join-Path $PSScriptRoot "..\package\docs\$name.md")
+    }
+    return
+}
 $Source = (Resolve-Path $Source).Path
+if (-not $Destination) { $Destination = [IO.Path]::ChangeExtension($Source, '.html') }
 $Destination = [IO.Path]::GetFullPath($Destination)
 $docs = Split-Path $Source -Parent
 $enc = { param($t) [System.Net.WebUtility]::HtmlEncode($t) }
@@ -172,6 +182,13 @@ $html = [regex]::Replace($html, '<p><img src="([^"]+)" alt="([^"]*)" /></p>', {
         "<figure><img loading=""lazy"" src=""$src"" alt=""$($m.Groups[2].Value)"" title=""Click to enlarge""><figcaption>$($m.Groups[2].Value)</figcaption></figure>"
     })
 $html = $html -replace '<a href="(https?://[^"]+)"', '<a href="$1" target="_blank" rel="noopener"'
+# Link to the other guide: its HTML file, and the id given to the heading there (GitHub anchors keep
+# the chapter number and double the separators; the ids of these pages do not).
+$html = [regex]::Replace($html, '<a href="([\w.-]+)\.md(?:#([^"]*))?"', {
+        param($m)
+        $anchor = ($m.Groups[2].Value -replace '^\d+-', '' -replace '-{2,}', '-')
+        '<a href="' + $m.Groups[1].Value + '.html' + $(if ($anchor) { '#' + $anchor } else { '' }) + '"'
+    })
 $html = $html -replace '<p class="markdown-alert-title"><svg viewBox="0 0 16 16"', '<p class="markdown-alert-title"><svg class="icon-sm" viewBox="0 0 16 16" fill="currentColor"'
 
 # ---- Parts and chapters ------------------------------------------------------------------------------------
@@ -386,7 +403,7 @@ footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--cp-bor
 <aside><div class="brand"><div class="brand-logo">$(Get-Icon 'server')</div><div><div class="brand-name">$(& $enc $meta.title)</div><div class="brand-sub">$(& $enc $meta.subtitle) · v$($meta.version)</div></div></div>
 <nav aria-label="Contents">$($nav.ToString())</nav></aside>
 <main>$hero$($body.ToString())
-<footer>$(& $enc $meta.title) $($meta.version) · $(& $enc $meta.author) · generated on $(Get-Date -Format 'yyyy-MM-dd HH:mm') from EasOAuthMailbox-Guide.md</footer></main>
+<footer>$(& $enc $meta.title) $($meta.version) · $(& $enc $meta.author) · generated on $(Get-Date -Format 'yyyy-MM-dd HH:mm') from $(& $enc (Split-Path $Source -Leaf))</footer></main>
 <button type="button" id="to-top" title="Back to top">$(Get-Icon 'up' 'icon-sm')</button>
 <dialog id="zoom"><img alt=""></dialog>
 <script>

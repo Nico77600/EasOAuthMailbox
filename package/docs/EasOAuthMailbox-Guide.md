@@ -1,14 +1,14 @@
 ---
 title: EAS OAuth Mailbox
-subtitle: Administrator guide
+subtitle: Developer guide
 version: 1.2.1
 author: Nicolas Fabert
-updated: 2026-10-05
+updated: 2026-10-08
 ---
 
-# EAS OAuth Mailbox — Administrator guide
+# EAS OAuth Mailbox — Developer guide
 
-> A step-by-step diagnostic of **Exchange ActiveSync** on Exchange Server and Exchange Online, for the three ways a mobile device signs in: **OAuth with AD FS**, **OAuth with Entra ID** (Exchange on-premises with hybrid modern authentication, or Exchange Online) and **Basic**. Each check says **what works, what does not and what to verify**, in the console, a window and an HTML report.
+> A step-by-step diagnostic of **Exchange ActiveSync** on Exchange Server and Exchange Online, for the three ways a mobile device signs in: **OAuth with AD FS**, **OAuth with Entra ID** (Exchange on-premises with hybrid modern authentication, or Exchange Online) and **Basic**. Each check says **what works, what does not and what to verify**, in the console, a window and an HTML report. For the prerequisites, the first run and how to read the result, read the [user guide](EasOAuthMailbox-UserGuide.md).
 
 ```cards
 key | OAuth with AD FS | On-premises modern authentication, Exchange 2019 CU13+ or SE. The default: `-Authority ADFS` (chapter 6).
@@ -726,7 +726,7 @@ Each fault fixed during tuning has its own test: bringing the fault back makes t
 | A new scenario | `$script:Scenarios` in `src\EasOAuthMailbox.Config.ps1`, and the `ValidateSet` of `Invoke-EasOAuthMailbox.ps1` and `Invoke-EomMailboxTest`. |
 | A new ActiveSync command | `src\EasOAuthMailbox.Core.ps1`, then its answer in the simulator. |
 | Report | `templates\Report.template.html`. |
-| This guide | `package\docs\EasOAuthMailbox-Guide.md`, then `.\tools\Build-Documentation.ps1`. |
+| This guide | `package\docs\EasOAuthMailbox-Guide.md`, the user guide `package\docs\EasOAuthMailbox-UserGuide.md`, then `.\tools\Build-Documentation.ps1`. |
 | Version | `EasOAuthMailbox.psd1`, `$script:ToolVersion`, file headers, this guide, `CHANGELOG.md`. |
 
 <!-- icon: book -->
@@ -737,8 +737,8 @@ The screenshots are produced **by the tool itself** against the simulated Exchan
 ```steps
 Test | `.\Run-Tests.ps1`
 Screenshots | `.\tools\New-DocumentationImages.ps1`: console, window and report (Microsoft Edge without UI).
-Guide | `.\tools\Build-Documentation.ps1` writes `package\docs\EasOAuthMailbox-Guide.html`, self-contained.
-Package | `.\tools\New-EasOAuthMailboxPackage.ps1` rebuilds the guide and copies the runtime files from `package\` to the release folder `..\package\EasOAuthMailbox-<version>`.
+Guide | `.\tools\Build-Documentation.ps1` writes `package\docs\EasOAuthMailbox-UserGuide.html` and `package\docs\EasOAuthMailbox-Guide.html`, self-contained.
+Package | `.\tools\New-EasOAuthMailboxPackage.ps1` rebuilds the guides and copies the runtime files from `package\` to the release folder `..\package\EasOAuthMailbox-<version>`.
 ```
 
 ### 20.1 Validation
