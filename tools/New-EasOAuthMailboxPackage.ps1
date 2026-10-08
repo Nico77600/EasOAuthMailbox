@@ -4,9 +4,10 @@
 
 .DESCRIPTION
     The package contains only what Invoke-EasOAuthMailbox.ps1 needs at run time, plus the HTML guide:
-        Invoke-EasOAuthMailbox.ps1, EasOAuthMailbox.psd1, EasOAuthMailbox.psm1, src\, config\, templates\,
-        docs\EasOAuthMailbox-Guide.html, README.md, CHANGELOG.md, LICENSE, THIRD-PARTY-NOTICES.md
-    The HTML guide is rebuilt first from docs\EasOAuthMailbox-Guide.md (tools\Build-Documentation.ps1):
+        package\Invoke-EasOAuthMailbox.ps1, package\EasOAuthMailbox.psd1, package\EasOAuthMailbox.psm1,
+        package\src\, package\config\, package\templates\, package\docs\EasOAuthMailbox-Guide.html,
+        package\README.md, CHANGELOG.md, package\LICENSE, package\THIRD-PARTY-NOTICES.md
+    The HTML guide is rebuilt first from package\docs\EasOAuthMailbox-Guide.md (tools\Build-Documentation.ps1):
     it is self-contained (images inline), so the Markdown source and the images are not copied.
     It never copies reports\, logs\, artifacts\, tests\ (with the simulator) or tools\.
 
@@ -37,7 +38,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$version = (Import-PowerShellDataFile -LiteralPath (Join-Path $root 'EasOAuthMailbox.psd1')).ModuleVersion
+$packageRoot = Join-Path $root 'package'
+$version = (Import-PowerShellDataFile -LiteralPath (Join-Path $packageRoot 'EasOAuthMailbox.psd1')).ModuleVersion
 if (-not $Destination) { $Destination = Join-Path (Split-Path $root -Parent) "package\EasOAuthMailbox-$version" }
 $Destination = [IO.Path]::GetFullPath($Destination, (Get-Location).Path).TrimEnd('\')
 $rootPrefix = [IO.Path]::GetFullPath($root).TrimEnd('\') + '\'
@@ -60,9 +62,10 @@ if (Test-Path -LiteralPath $Destination) {
 $files = [Collections.Generic.List[string]]::new()
 foreach ($f in 'Invoke-EasOAuthMailbox.ps1', 'EasOAuthMailbox.psd1', 'EasOAuthMailbox.psm1', 'README.md', 'CHANGELOG.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md',
     'config\EasOAuthMailbox.config.psd1', 'templates\Report.template.html', 'docs\EasOAuthMailbox-Guide.html') { $files.Add($f) }
-Get-ChildItem -LiteralPath (Join-Path $root 'src') -Filter '*.ps1' -File | ForEach-Object { $files.Add("src\$($_.Name)") }
+Get-ChildItem -LiteralPath (Join-Path $packageRoot 'src') -Filter '*.ps1' -File | ForEach-Object { $files.Add("src\$($_.Name)") }
 foreach ($f in $files) {
-    $source = Join-Path $root $f
+    $source = Join-Path $packageRoot $f
+    if ($f -eq 'CHANGELOG.md') { $source = Join-Path $root $f }
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Missing file in the tool folder: $f" }
     $target = Join-Path $Destination $f
     [void][IO.Directory]::CreateDirectory((Split-Path $target -Parent))
@@ -84,7 +87,7 @@ if ($config -notmatch 'contoso\.test') { $problems.Add('The configuration of the
 if ($problems.Count) { throw ("Package not valid ($Destination):`n - " + ($problems -join "`n - ")) }
 
 # Same scenarios as the source code, and reports written under the package folder.
-$expected = [string](& pwsh -NoProfile -Command "Import-Module '$root\EasOAuthMailbox.psd1'; (Get-EomTestCatalog).Count")
+$expected = [string](& pwsh -NoProfile -Command "Import-Module '$packageRoot\EasOAuthMailbox.psd1'; (Get-EomTestCatalog).Count")
 $loaded = & pwsh -NoProfile -Command "Import-Module '$Destination\EasOAuthMailbox.psd1'; (Get-EomTestCatalog).Count; (Import-EomConfiguration).OutputPath"
 if ($LASTEXITCODE -ne 0 -or $loaded[0] -ne $expected -or -not ([string]$loaded[1]).StartsWith($Destination)) { throw "The module does not load correctly from the package (expected $expected scenarios): $loaded" }
 

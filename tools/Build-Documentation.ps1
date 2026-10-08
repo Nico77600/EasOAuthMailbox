@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Builds docs\EasOAuthMailbox-Guide.html from docs\EasOAuthMailbox-Guide.md.
+    Builds package\docs\EasOAuthMailbox-Guide.html from package\docs\EasOAuthMailbox-Guide.md.
 
 .DESCRIPTION
     The Markdown guide stays readable as plain text (and on GitHub / Azure DevOps). This script
@@ -33,8 +33,8 @@
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
-    [string]$Source = (Join-Path $PSScriptRoot '..\docs\EasOAuthMailbox-Guide.md'),
-    [string]$Destination = (Join-Path $PSScriptRoot '..\docs\EasOAuthMailbox-Guide.html')
+    [string]$Source = (Join-Path $PSScriptRoot '..\package\docs\EasOAuthMailbox-Guide.md'),
+    [string]$Destination = (Join-Path $PSScriptRoot '..\package\docs\EasOAuthMailbox-Guide.html')
 )
 $ErrorActionPreference = 'Stop'
 $Source = (Resolve-Path $Source).Path

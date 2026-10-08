@@ -14,7 +14,8 @@
 #>
 
 BeforeAll {
-    $script:Root = Split-Path $PSScriptRoot -Parent
+    $script:RepoRoot = Split-Path $PSScriptRoot -Parent
+    $script:Root = Join-Path $script:RepoRoot 'package'
     Import-Module (Join-Path $script:Root 'EasOAuthMailbox.psd1') -Force
     $script:Module = Get-Module EasOAuthMailbox
     function InModule([scriptblock]$Block, [object]$Argument) { & $script:Module $Block $Argument }
@@ -35,7 +36,7 @@ BeforeAll {
         Mailbox = 'eas-test@contoso.test'; ClientId = 'client'; DeviceId = 'TESTDEVICE01'
         # The device code unless a test opens the (simulated) sign-in window: no browser is ever started by the tests.
         SignIn = 'DeviceCode'
-        OutputPath = (Join-Path $script:Root 'artifacts\test-reports'); LogPath = (Join-Path $script:Root 'artifacts\test-logs')
+        OutputPath = (Join-Path $script:RepoRoot 'artifacts\test-reports'); LogPath = (Join-Path $script:RepoRoot 'artifacts\test-logs')
     }
     function Invoke-Scenario([string]$Type, [hashtable]$Overrides = @{}, [string]$Token = $script:ValidToken) {
         $cfg = $script:Config.Clone(); foreach ($k in $Overrides.Keys) { $cfg[$k] = $Overrides[$k] }
@@ -60,7 +61,7 @@ Describe 'Configuration' {
     }
 
     It 'lists unknown sections, unknown keys and invalid values together' {
-        $path = Join-Path $script:Root 'artifacts\bad.config.psd1'
+        $path = Join-Path $script:RepoRoot 'artifacts\bad.config.psd1'
         [void][IO.Directory]::CreateDirectory((Split-Path $path))
         "@{ Target = @{ AdfsUrl = 'http://adfs/x'; Mailbx = 'a' }; Extra = @{}; Test = @{ MessageCount = 500; DefaultType = 'Nope' } }" | Set-Content $path
         $message = { Import-EomConfiguration -Path $path } | Should -Throw -PassThru
@@ -820,7 +821,7 @@ Describe 'Scenarios against a simulated Exchange' {
 
     It 'Basic: the password never reaches the result, the trace or the report' {
         $r = Invoke-BasicScenario 'Full' @{ AcknowledgePolicy = $true }
-        $out = Join-Path $script:Root 'artifacts\report-basic'
+        $out = Join-Path $script:RepoRoot 'artifacts\report-basic'
         Remove-Item $out -Recurse -Force -ErrorAction SilentlyContinue
         $report = Export-EomReport -Result $r -OutputPath $out
         $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("eas-test@contoso.test:$script:BasicPassword"))
@@ -1216,7 +1217,7 @@ Describe 'Report' {
         $cfg = $script:Config.Clone()
         $cfg.AcknowledgePolicy = $true
         $script:Result = Invoke-EomMailboxTest -Configuration $cfg -TestType InboxSync -AccessToken $script:ValidToken -Quiet
-        $script:ReportOut = Join-Path $script:Root 'artifacts\report-test'
+        $script:ReportOut = Join-Path $script:RepoRoot 'artifacts\report-test'
         Remove-Item $script:ReportOut -Recurse -Force -ErrorAction SilentlyContinue
         $script:Report = Export-EomReport -Result $script:Result -OutputPath $script:ReportOut
     }

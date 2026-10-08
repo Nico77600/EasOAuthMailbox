@@ -726,7 +726,7 @@ Each fault fixed during tuning has its own test: bringing the fault back makes t
 | A new scenario | `$script:Scenarios` in `src\EasOAuthMailbox.Config.ps1`, and the `ValidateSet` of `Invoke-EasOAuthMailbox.ps1` and `Invoke-EomMailboxTest`. |
 | A new ActiveSync command | `src\EasOAuthMailbox.Core.ps1`, then its answer in the simulator. |
 | Report | `templates\Report.template.html`. |
-| This guide | `docs\EasOAuthMailbox-Guide.md`, then `.\tools\Build-Documentation.ps1`. |
+| This guide | `package\docs\EasOAuthMailbox-Guide.md`, then `.\tools\Build-Documentation.ps1`. |
 | Version | `EasOAuthMailbox.psd1`, `$script:ToolVersion`, file headers, this guide, `CHANGELOG.md`. |
 
 <!-- icon: book -->
@@ -737,8 +737,8 @@ The screenshots are produced **by the tool itself** against the simulated Exchan
 ```steps
 Test | `.\Run-Tests.ps1`
 Screenshots | `.\tools\New-DocumentationImages.ps1`: console, window and report (Microsoft Edge without UI).
-Guide | `.\tools\Build-Documentation.ps1` writes `docs\EasOAuthMailbox-Guide.html`, self-contained.
-Package | `.\tools\New-EasOAuthMailboxPackage.ps1` rebuilds the guide and copies the runtime files to `..\package\EasOAuthMailbox-<version>`.
+Guide | `.\tools\Build-Documentation.ps1` writes `package\docs\EasOAuthMailbox-Guide.html`, self-contained.
+Package | `.\tools\New-EasOAuthMailboxPackage.ps1` rebuilds the guide and copies the runtime files from `package\` to the release folder `..\package\EasOAuthMailbox-<version>`.
 ```
 
 ### 20.1 Validation
