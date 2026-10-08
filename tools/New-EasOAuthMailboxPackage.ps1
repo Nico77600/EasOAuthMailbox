@@ -3,12 +3,13 @@
     Copies the files needed to run EAS OAuth Mailbox into a separate folder, ready to be zipped.
 
 .DESCRIPTION
-    The package contains only what Invoke-EasOAuthMailbox.ps1 needs at run time, plus the HTML guide:
+    The package contains only what Invoke-EasOAuthMailbox.ps1 needs at run time, plus the HTML guides:
         package\Invoke-EasOAuthMailbox.ps1, package\EasOAuthMailbox.psd1, package\EasOAuthMailbox.psm1,
-        package\src\, package\config\, package\templates\, package\docs\EasOAuthMailbox-Guide.html,
+        package\src\, package\config\, package\templates\, package\docs\EasOAuthMailbox-UserGuide.html,
+        package\docs\EasOAuthMailbox-Guide.html,
         package\README.md, CHANGELOG.md, package\LICENSE, package\THIRD-PARTY-NOTICES.md
-    The HTML guide is rebuilt first from package\docs\EasOAuthMailbox-Guide.md (tools\Build-Documentation.ps1):
-    it is self-contained (images inline), so the Markdown source and the images are not copied.
+    The HTML guides are rebuilt first from their Markdown sources (tools\Build-Documentation.ps1):
+    they are self-contained (images inline), so the Markdown sources and the images are not copied.
     It never copies reports\, logs\, artifacts\, tests\ (with the simulator) or tools\.
 
     The configuration is copied as delivered (contoso.test example values). The script checks the
@@ -61,7 +62,7 @@ if (Test-Path -LiteralPath $Destination) {
 # ---- Files needed at run time -------------------------------------------------------------------
 $files = [Collections.Generic.List[string]]::new()
 foreach ($f in 'Invoke-EasOAuthMailbox.ps1', 'EasOAuthMailbox.psd1', 'EasOAuthMailbox.psm1', 'README.md', 'CHANGELOG.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md',
-    'config\EasOAuthMailbox.config.psd1', 'templates\Report.template.html', 'docs\EasOAuthMailbox-Guide.html') { $files.Add($f) }
+    'config\EasOAuthMailbox.config.psd1', 'templates\Report.template.html', 'docs\EasOAuthMailbox-UserGuide.html', 'docs\EasOAuthMailbox-Guide.html') { $files.Add($f) }
 Get-ChildItem -LiteralPath (Join-Path $packageRoot 'src') -Filter '*.ps1' -File | ForEach-Object { $files.Add("src\$($_.Name)") }
 foreach ($f in $files) {
     $source = Join-Path $packageRoot $f

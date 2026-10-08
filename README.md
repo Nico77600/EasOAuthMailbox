@@ -10,8 +10,9 @@
   <a href="#how-it-works"><b>How it works</b></a> &nbsp;&middot;&nbsp;
   <a href="#apple-mail-on-an-iphone"><b>Apple Mail on an iPhone</b></a> &nbsp;&middot;&nbsp;
   <a href="#reports"><b>Reports</b></a> &nbsp;&middot;&nbsp;
-  <a href="#user-guide"><b>User guide</b></a> &nbsp;&middot;&nbsp;
-  <a href="#detailed-guide"><b>Detailed guide</b></a>
+  <a href="#quick-start"><b>Quick start</b></a> &nbsp;&middot;&nbsp;
+  <a href="package/docs/EasOAuthMailbox-UserGuide.md"><b>User guide</b></a> &nbsp;&middot;&nbsp;
+  <a href="package/docs/EasOAuthMailbox-Guide.md"><b>Developer guide</b></a>
 </p>
 
 > [!IMPORTANT]
@@ -71,11 +72,7 @@ The `AppleMail` scenario replays what an iPhone does when an Exchange account is
 
 Each run writes `Steps.csv` (one row per check), `Trace.csv` (every HTTP request and response), `Folders.csv`, `Messages.csv` (Inbox headers: date, sender, subject — no body, no attachment), `Policy.csv`, `Summary.json` and a self-contained HTML report.
 
-## User guide
-
-What you need to run a test. The [detailed guide](#detailed-guide) goes further.
-
-### 1. Prerequisites
+## Requirements
 
 | Item | Requirement |
 |---|---|
@@ -92,18 +89,22 @@ And on the Exchange side, for the sign-in method you test:
 | **OAuth - Entra ID** | Exchange on-premises in hybrid with modern authentication (HMA) enabled, or a mailbox in Exchange Online |
 | **Basic - On-prem** | Basic authentication allowed on the ActiveSync virtual directory |
 
-### 2. Install
+## Quick start
 
-1. Download `EasOAuthMailbox-<version>.zip` from the [latest release](https://github.com/Nico77600/EasOAuthMailbox/releases/latest) and extract it, for example in `C:\Tools` (or copy the repository `package` folder).
-2. Unblock the files (command at the top of this page).
-3. Open `config\EasOAuthMailbox.config.psd1` in Notepad and replace the `contoso.test` values: the test mailbox, the ActiveSync URL and, with AD FS, the AD FS URL. Every value can also be typed in the window or given on the command line.
+**The simplest: the window.** Get the tool, replace the `contoso.test` values of the configuration — the test mailbox, the ActiveSync URL and, with AD FS, the AD FS URL — then open the window. Every value can also be typed in the window or given on the command line.
 
-### 3. Run
+```powershell
+git clone https://github.com/Nico77600/EasOAuthMailbox.git
+cd EasOAuthMailbox\package
+notepad .\config\EasOAuthMailbox.config.psd1
+.\Invoke-EasOAuthMailbox.ps1 -Gui
+```
 
-**The simplest: the window.**
+Or from a release: download `EasOAuthMailbox-<version>.zip` from the [latest release](https://github.com/Nico77600/EasOAuthMailbox/releases/latest), extract it, for example in `C:\Tools`, and unblock the files (command at the top of this page), then:
 
 ```powershell
 cd C:\Tools\EasOAuthMailbox-1.2.1
+notepad .\config\EasOAuthMailbox.config.psd1
 .\Invoke-EasOAuthMailbox.ps1 -Gui
 ```
 
@@ -125,41 +126,27 @@ Choose the sign-in method, check the mailbox and the URLs, choose the scenario, 
 .\Invoke-EasOAuthMailbox.ps1 -TestType AppleMail -Mailbox eas-test@contoso.com -AcknowledgePolicy
 ```
 
-Which scenario?
+The console shows each check as it runs, then the verdict and the path of the report; the exit code is `0` passed, `1` failed, `2` warnings or blocked. Which scenario to choose, what each option changes and how to read the report: the [user guide](package/docs/EasOAuthMailbox-UserGuide.md).
 
-| You want to... | Scenario |
+## Documentation
+
+The `package` folder of this repository holds exactly the files needed to run the tool, with both guides. The zip of each [release](https://github.com/Nico77600/EasOAuthMailbox/releases) contains the same run-time files with the HTML guides; `.\tools\New-EasOAuthMailboxPackage.ps1` builds that zip content from the repository.
+
+| Guide | Content |
 |---|---|
-| check the prerequisites before opening to users, or understand why nothing works | `Discovery` — no sign-in, nothing created |
-| know whether the token is issued, then accepted by Exchange | `Endpoint` |
-| accept a test mailbox from end to end | `Full` |
-| understand why an iPhone does not connect | `AppleMail` |
+| **[User guide](package/docs/EasOAuthMailbox-UserGuide.md)** | What you need to run a test: prerequisites, install, the window and the command line, which scenario to choose, how to read the console, the report and the files produced, and the usual symptoms. |
+| **[Developer guide](package/docs/EasOAuthMailbox-Guide.md)** | For developers, and to go further in troubleshooting: the three sign-in methods with the AD FS, Entra ID and Exchange configuration they expect, every setting, each check with what to verify, the path of the iPhone, the reports and the HTTP trace, troubleshooting, the architecture of the module, the tests and how to evolve the tool. |
 
-Good to know:
+Both guides also exist as a single HTML file with a light and a dark theme (`package/docs/EasOAuthMailbox-UserGuide.html`, `package/docs/EasOAuthMailbox-Guide.html`): download them and open them locally, or use the copies in the zip of each release.
 
-- Not sure where the user signs in? `-Authority Auto` goes where Exchange sends the user, like a client.
-- On a server without a browser, add `-SignIn DeviceCode`: type the code on any other device (a private window if the browser is signed in with another account).
-- Without `-AcknowledgePolicy`, when Exchange requires a policy, it is only downloaded for review and the run stops as *Blocked*.
-
-### 4. Read the result
-
-- The console shows each check as it runs, then the verdict and the path of the report.
-- The report is `reports\EasOAuthMailbox_<scenario>_<date>\EasOAuthMailbox.html`: each check that fails says what to look at, with the request sent and the response received. The CSV and JSON files are next to it.
-- Exit code: `0` passed, `1` failed, `2` warnings or blocked.
-- Exchange then lists the test device: `Get-MobileDevice -Mailbox <mailbox>`; remove it with `Remove-MobileDevice` once the test is over.
-
-## Detailed guide
-
-For developers, and to go further in troubleshooting. The detailed guide covers the three sign-in methods with the AD FS, Entra ID and Exchange configuration they expect, every setting, each check with what to verify, the path of the iPhone, the reports and the HTTP trace, troubleshooting, the architecture of the module, the tests and how to evolve the tool:
-
-- [package/docs/EasOAuthMailbox-Guide.md](package/docs/EasOAuthMailbox-Guide.md)
-- `package/docs/EasOAuthMailbox-Guide.html` — the same guide as a single HTML file, also in the zip of each release
+## Tests
 
 ```powershell
 .\Run-Tests.ps1                              # Pester 6.1+, simulated AD FS, Entra ID and Exchange (WBXML built byte by byte), no connection
-.\tools\New-DocumentationImages.ps1          # screenshots of the guide, rendered by the tool itself
-.\tools\Build-Documentation.ps1              # the HTML guide
+.\tools\New-DocumentationImages.ps1          # screenshots of the guides, rendered by the tool itself
+.\tools\Build-Documentation.ps1              # the HTML guides
 .\tools\New-ReadmeImages.ps1                 # the graphics of this page (light and dark)
-.\tools\New-EasOAuthMailboxPackage.ps1       # builds the release zip content from package: run-time files and the HTML guide only
+.\tools\New-EasOAuthMailboxPackage.ps1       # builds the release zip content from package: run-time files and the HTML guides only
 ```
 
 ## License
