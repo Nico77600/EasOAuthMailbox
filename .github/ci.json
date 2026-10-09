@@ -1,0 +1,10 @@
+{
+  "runtimeRoot": "package",
+  "testMode": "runner",
+  "testEntry": "Run-Tests.ps1",
+  "tests": [
+    "tests/EasOAuthMailbox.Tests.ps1"
+  ],
+  "packageBuilder": "tools/New-EasOAuthMailboxPackage.ps1",
+  "packageEntry": "Invoke-EasOAuthMailbox.ps1"
+}
