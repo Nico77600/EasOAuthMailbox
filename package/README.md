@@ -56,3 +56,12 @@ This folder contains everything needed to run the tool: `Invoke-EasOAuthMailbox.
 Project page, releases and change log: https://github.com/Nico77600/EasOAuthMailbox
 
 License: [MIT](LICENSE).
+
+## Disclaimer
+
+This Script is a Personal project.
+It's provided "AS-IS". It's not an official Microsoft product so no support can be expected from Microsoft.
+
+As any scripts you must read carefully the documentation and test it first in a Test environment before any run in Production.
+
+Use a test mailbox: from `FolderSync` on, Exchange registers an ActiveSync device partnership.
