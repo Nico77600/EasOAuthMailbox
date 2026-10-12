@@ -142,7 +142,16 @@
     Version : 1.2.1
     Exit codes : 0 = Passed, 1 = Failed, 2 = finished with warnings or blocked (policy not acknowledged).
     Documentation : docs\EasOAuthMailbox-Guide.html (source: docs\EasOAuthMailbox-Guide.md)
+
+    Disclaimer:
+    This Script is a Personal project.
+    It's provided "AS-IS". It's not an official Microsoft product so no support can be expected from Microsoft.
+
+    As any scripts you must read carefully the documentation and test it first in a Test environment before any run in Production.
+
+    Use a test mailbox: from `FolderSync` on, Exchange registers an ActiveSync device partnership.
 #>
+
 #Requires -Version 7.4
 [CmdletBinding()]
 param(
