@@ -1,9 +1,9 @@
 <!doctype html>
 <!--
-    EAS OAuth Mailbox - HTML template
+    Mobile Device Client for Exchange - HTML template
     Author  : Nicolas Fabert
     Version : 1.2.1
-    Export-EomReport (src\EasOAuthMailbox.Report.ps1) copies this file and replaces seven markers, each
+    Export-MdcReport (src\MobileDeviceClient.Report.ps1) copies this file and replaces seven markers, each
     exactly once: TITLE (text), and SUMMARY, STEPS, FOLDERS, MESSAGES, POLICY, TRACE (JSON, in the
     script blocks at the end of the body). Everything else is static: texts, colours and tabs can be
     changed here. Same design system as Exchange Log Report and Purview DLP Report (--cp-* variables).
@@ -155,7 +155,7 @@ footer { color:var(--cp-text-muted); font-size:12px; line-height:1.6; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition:none !important; } .tile:hover { transform:none; } }
 @media print { body { background:#fff; padding:0; } .tabs, .controls, dialog { display:none !important; } .scroll { max-height:none; overflow:visible; } section.block, header { break-inside:avoid; } }
 </style></head><body>
-<header><div class="hero-top"><div><span id="origin">EAS OAuth Mailbox</span><h1 id="title">ActiveSync OAuth diagnostic</h1>
+<header><div class="hero-top"><div><span id="origin">Mobile Device Client for Exchange</span><h1 id="title">ActiveSync OAuth diagnostic</h1>
 <p class="subtitle" id="subtitle"></p></div>
 <div class="period"><span class="label">Execution</span><div id="period"></div></div></div>
 <div class="metrics">
@@ -214,11 +214,11 @@ A passed step proves that step only, for this DeviceId and this account. FolderS
   const notPlanned = "Not part of this scenario";
 
   // ---- Header ---------------------------------------------------------------------------
-  el("origin").textContent = `EAS OAuth Mailbox / ${summary.TestType || ""}${basic ? " / Basic" : (entra ? " / Entra ID" : "")}`;
+  el("origin").textContent = `Mobile Device Client for Exchange / ${summary.TestType || ""}${basic ? " / Basic" : (entra ? " / Entra ID" : "")}`;
   el("title").textContent = basic ? "ActiveSync Basic diagnostic" : "ActiveSync OAuth diagnostic";
   el("subtitle").textContent = `${summary.Scenario || "Diagnostic"} for ${summary.Mailbox || "the mailbox"}. Each check says what works and what does not; the ${basic ? "password" : "access token"} is never written to this report.`;
   el("period").innerHTML = "";
-  [[date(summary.StartedUtc)], ["to " + date(summary.CompletedUtc)], [`${summary.DurationSeconds ?? "-"} s ${"\u00B7"} ${summary.Tool || "EAS OAuth Mailbox"} ${summary.Version || ""}`]]
+  [[date(summary.StartedUtc)], ["to " + date(summary.CompletedUtc)], [`${summary.DurationSeconds ?? "-"} s ${"\u00B7"} ${summary.Tool || "Mobile Device Client for Exchange"} ${summary.Version || ""}`]]
     .forEach(line => el("period").appendChild(make("div", null, line[0])));
   el("metric-status").textContent = summary.Status || "Unknown";
   el("metric-status-note").textContent = summary.Error || (summary.Status === "Passed" ? "Every check passed" : "See the checks below");
@@ -419,7 +419,7 @@ A passed step proves that step only, for this DeviceId and this account. FolderS
   el("export").addEventListener("click", () => {
     const lines = [current.cols.map(c => csvCell(c[0])).join(";")].concat(rows().map(r => current.cols.map(c => csvCell(c[1](r))).join(";")));
     const link = make("a"); link.href = URL.createObjectURL(new Blob(["\ufeff" + lines.join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" }));
-    link.download = `EasOAuthMailbox-${current.key}-view.csv`; link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    link.download = `MobileDeviceClient-${current.key}-view.csv`; link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   });
   el("search").addEventListener("input", render);
   el("clear-filters").addEventListener("click", () => { el("search").value = ""; sortIndex = -1; render(); });

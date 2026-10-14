@@ -1,2 +1,15 @@
 # Language statistics: the guides are documentation, not code.
 package/docs/** linguist-documentation
+
+# Authenticode-signed PowerShell files: Git must keep their exact bytes (CRLF included).
+package/Invoke-MobileDeviceClient.ps1 -text whitespace=cr-at-eol
+package/MobileDeviceClient.psm1 -text whitespace=cr-at-eol
+package/MobileDeviceClient.psd1 -text whitespace=cr-at-eol
+package/src/MobileDeviceClient.Browser.ps1 -text whitespace=cr-at-eol
+package/src/MobileDeviceClient.Checks.ps1 -text whitespace=cr-at-eol
+package/src/MobileDeviceClient.Config.ps1 -text whitespace=cr-at-eol
+package/src/MobileDeviceClient.Console.ps1 -text whitespace=cr-at-eol
+package/src/MobileDeviceClient.Core.ps1 -text whitespace=cr-at-eol
+package/src/MobileDeviceClient.Gui.ps1 -text whitespace=cr-at-eol
+package/src/MobileDeviceClient.Http.ps1 -text whitespace=cr-at-eol
+package/src/MobileDeviceClient.Report.ps1 -text whitespace=cr-at-eol

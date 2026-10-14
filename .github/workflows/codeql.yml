@@ -22,7 +22,7 @@
   "jobs": {
     "analyze": {
       "name": "CodeQL ${{ matrix.language }} (advisory)",
-      "if": "${{ contains(fromJSON('[\"Nico77600/EasOAuthMailbox\",\"Nico77600/Exchange2013-2016-to-2019-Migration\",\"Nico77600/ExchangeLogReport\",\"Nico77600/ExchangeMailboxMigration\",\"Nico77600/MailboxMessageReport\",\"Nico77600/MeetingCleanup\",\"Nico77600/MeetingCleanupOnPrem\",\"Nico77600/MessageTraceReport\",\"Nico77600/PraCloudMailbox\",\"Nico77600/PraRemoteMailbox\",\"Nico77600/PurviewDlpReport\",\"Nico77600/PurviewDlpReport-Fabric\",\"Nico77600/RecipientLimitReport\",\"Nico77600/WebServicesClient\",\"Nico77600/XTapSharingMigration\"]'), github.repository) && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') }}",
+      "if": "${{ contains(fromJSON('[\"Nico77600/MobileDeviceClient\",\"Nico77600/Exchange2013-2016-to-2019-Migration\",\"Nico77600/ExchangeLogReport\",\"Nico77600/ExchangeMailboxMigration\",\"Nico77600/MailboxMessageReport\",\"Nico77600/MeetingCleanup\",\"Nico77600/MeetingCleanupOnPrem\",\"Nico77600/MessageTraceReport\",\"Nico77600/PraCloudMailbox\",\"Nico77600/PraRemoteMailbox\",\"Nico77600/PurviewDlpReport\",\"Nico77600/PurviewDlpReport-Fabric\",\"Nico77600/RecipientLimitReport\",\"Nico77600/WebServicesClient\",\"Nico77600/XTapSharingMigration\"]'), github.repository) && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') }}",
       "runs-on": "ubuntu-latest",
       "timeout-minutes": 25,
       "permissions": {

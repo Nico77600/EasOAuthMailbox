@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="package/docs/images/readme-banner-dark.png">
-    <img alt="EAS OAuth Mailbox: a step-by-step diagnostic of Exchange ActiveSync with modern authentication through AD FS or Entra ID, on-premises or in Exchange Online; it plays the device, Apple Mail on an iPhone included, and shows every request sent and every response received" src="package/docs/images/readme-banner-light.png">
+    <img alt="Mobile Device Client for Exchange: a step-by-step diagnostic of Exchange ActiveSync with modern authentication through AD FS or Entra ID, on-premises or in Exchange Online; it plays the device, Apple Mail on an iPhone included, and shows every request sent and every response received" src="package/docs/images/readme-banner-light.png">
   </picture>
 </p>
 
@@ -11,9 +11,11 @@
   <a href="#apple-mail-on-an-iphone"><b>Apple Mail on an iPhone</b></a> &nbsp;&middot;&nbsp;
   <a href="#reports"><b>Reports</b></a> &nbsp;&middot;&nbsp;
   <a href="#quick-start"><b>Quick start</b></a> &nbsp;&middot;&nbsp;
-  <a href="package/docs/EasOAuthMailbox-UserGuide.md"><b>User guide</b></a> &nbsp;&middot;&nbsp;
-  <a href="package/docs/EasOAuthMailbox-Guide.md"><b>Developer guide</b></a>
+  <a href="package/docs/MobileDeviceClient-UserGuide.md"><b>User guide</b></a> &nbsp;&middot;&nbsp;
+  <a href="package/docs/MobileDeviceClient-Guide.md"><b>Developer guide</b></a>
 </p>
+
+*Mobile Device Client for Exchange, formerly EAS OAuth Mailbox (`EasOAuthMailbox`).*
 
 > [!IMPORTANT]
 > Files downloaded from the Internet may be blocked by Windows and fail to run. Before using this project, unblock every file in the downloaded folder:
@@ -61,12 +63,12 @@ The `AppleMail` scenario replays what an iPhone does when an Exchange account is
 
 <table>
   <tr>
-    <td width="50%" valign="top"><a href="package/docs/images/eas-report-overview.png"><img alt="HTML report overview" src="package/docs/images/eas-report-overview.png"></a><br><sub><b>HTML report</b> &middot; result, checks passed, folders, Inbox headers, and what was tested</sub></td>
-    <td width="50%" valign="top"><a href="package/docs/images/eas-report-exchange.png"><img alt="A check with the request sent and the response received" src="package/docs/images/eas-report-exchange.png"></a><br><sub><b>Request sent, response received</b> &middot; for every check: headers, WBXML decoded, AD FS and Entra ID JSON; tokens masked</sub></td>
+    <td width="50%" valign="top"><a href="package/docs/images/mdc-report-overview.png"><img alt="HTML report overview" src="package/docs/images/mdc-report-overview.png"></a><br><sub><b>HTML report</b> &middot; result, checks passed, folders, Inbox headers, and what was tested</sub></td>
+    <td width="50%" valign="top"><a href="package/docs/images/mdc-report-exchange.png"><img alt="A check with the request sent and the response received" src="package/docs/images/mdc-report-exchange.png"></a><br><sub><b>Request sent, response received</b> &middot; for every check: headers, WBXML decoded, AD FS and Entra ID JSON; tokens masked</sub></td>
   </tr>
   <tr>
-    <td width="50%" valign="top"><a href="package/docs/images/eas-console-online.png"><img alt="A complete test of a mailbox in Exchange Online in the console" src="package/docs/images/eas-console-online.png"></a><br><sub><b>Console</b> &middot; a mailbox in Exchange Online, signed in with Entra ID, from the prerequisites to the Inbox headers</sub></td>
-    <td width="50%" valign="top"><a href="package/docs/images/eas-gui.png"><img alt="The window" src="package/docs/images/eas-gui.png"></a><br><sub><b>Window</b> &middot; choose the sign-in method and the scenario, follow the progress, open the report</sub></td>
+    <td width="50%" valign="top"><a href="package/docs/images/mdc-console-online.png"><img alt="A complete test of a mailbox in Exchange Online in the console" src="package/docs/images/mdc-console-online.png"></a><br><sub><b>Console</b> &middot; a mailbox in Exchange Online, signed in with Entra ID, from the prerequisites to the Inbox headers</sub></td>
+    <td width="50%" valign="top"><a href="package/docs/images/mdc-gui.png"><img alt="The window" src="package/docs/images/mdc-gui.png"></a><br><sub><b>Window</b> &middot; choose the sign-in method and the scenario, follow the progress, open the report</sub></td>
   </tr>
 </table>
 
@@ -94,18 +96,18 @@ And on the Exchange side, for the sign-in method you test:
 **The simplest: the window.** Get the tool, replace the `contoso.test` values of the configuration — the test mailbox, the ActiveSync URL and, with AD FS, the AD FS URL — then open the window. Every value can also be typed in the window or given on the command line.
 
 ```powershell
-git clone https://github.com/Nico77600/EasOAuthMailbox.git
-cd EasOAuthMailbox\package
-notepad .\config\EasOAuthMailbox.config.psd1
-.\Invoke-EasOAuthMailbox.ps1 -Gui
+git clone https://github.com/Nico77600/MobileDeviceClient.git
+cd MobileDeviceClient\package
+notepad .\config\MobileDeviceClient.config.psd1
+.\Invoke-MobileDeviceClient.ps1 -Gui
 ```
 
-Or from a release: download `EasOAuthMailbox-<version>.zip` from the [latest release](https://github.com/Nico77600/EasOAuthMailbox/releases/latest), extract it, for example in `C:\Tools`, and unblock the files (command at the top of this page), then:
+Or from a release: download `MobileDeviceClient-<version>.zip` from the [latest release](https://github.com/Nico77600/MobileDeviceClient/releases/latest), extract it, for example in `C:\Tools`, and unblock the files (command at the top of this page), then:
 
 ```powershell
-cd C:\Tools\EasOAuthMailbox-1.2.1
-notepad .\config\EasOAuthMailbox.config.psd1
-.\Invoke-EasOAuthMailbox.ps1 -Gui
+cd C:\Tools\MobileDeviceClient-2.0.0
+notepad .\config\MobileDeviceClient.config.psd1
+.\Invoke-MobileDeviceClient.ps1 -Gui
 ```
 
 Choose the sign-in method, check the mailbox and the URLs, choose the scenario, then **Run the test**. With OAuth, a sign-in window opens: type the password and the MFA there.
@@ -114,30 +116,30 @@ Choose the sign-in method, check the mailbox and the URLs, choose the scenario, 
 
 ```powershell
 # Without signing in: certificates, OAuth challenge, and which sign-in Exchange offers this mailbox
-.\Invoke-EasOAuthMailbox.ps1 -TestType Discovery -Mailbox eas-test@contoso.com
+.\Invoke-MobileDeviceClient.ps1 -TestType Discovery -Mailbox eas-test@contoso.com
 
 # Complete test of a test mailbox, with each sign-in method
-.\Invoke-EasOAuthMailbox.ps1 -TestType Full -AcknowledgePolicy                          # OAuth - On-prem AD FS
-.\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authority EntraID -AcknowledgePolicy       # OAuth - Entra ID, Exchange on-premises (HMA)
-.\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authority EntraID -AcknowledgePolicy -EasUrl https://outlook.office365.com/Microsoft-Server-ActiveSync   # OAuth - Entra ID, Exchange Online
-.\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authentication Basic -AcknowledgePolicy    # Basic - On-prem (the password is asked)
+.\Invoke-MobileDeviceClient.ps1 -TestType Full -AcknowledgePolicy                          # OAuth - On-prem AD FS
+.\Invoke-MobileDeviceClient.ps1 -TestType Full -Authority EntraID -AcknowledgePolicy       # OAuth - Entra ID, Exchange on-premises (HMA)
+.\Invoke-MobileDeviceClient.ps1 -TestType Full -Authority EntraID -AcknowledgePolicy -EasUrl https://outlook.office365.com/Microsoft-Server-ActiveSync   # OAuth - Entra ID, Exchange Online
+.\Invoke-MobileDeviceClient.ps1 -TestType Full -Authentication Basic -AcknowledgePolicy    # Basic - On-prem (the password is asked)
 
 # Like an iPhone: only the address, the rest comes from Autodiscover and Exchange
-.\Invoke-EasOAuthMailbox.ps1 -TestType AppleMail -Mailbox eas-test@contoso.com -AcknowledgePolicy
+.\Invoke-MobileDeviceClient.ps1 -TestType AppleMail -Mailbox eas-test@contoso.com -AcknowledgePolicy
 ```
 
-The console shows each check as it runs, then the verdict and the path of the report; the exit code is `0` passed, `1` failed, `2` warnings or blocked. Which scenario to choose, what each option changes and how to read the report: the [user guide](package/docs/EasOAuthMailbox-UserGuide.md).
+The console shows each check as it runs, then the verdict and the path of the report; the exit code is `0` passed, `1` failed, `2` warnings or blocked. Which scenario to choose, what each option changes and how to read the report: the [user guide](package/docs/MobileDeviceClient-UserGuide.md).
 
 ## Documentation
 
-The `package` folder of this repository holds exactly the files needed to run the tool, with both guides. The zip of each [release](https://github.com/Nico77600/EasOAuthMailbox/releases) contains the same run-time files with the HTML guides; `.\tools\New-EasOAuthMailboxPackage.ps1` builds that zip content from the repository.
+The `package` folder of this repository holds exactly the files needed to run the tool, with both guides. The zip of each [release](https://github.com/Nico77600/MobileDeviceClient/releases) contains the same run-time files with the HTML guides; `.\tools\New-MobileDeviceClientPackage.ps1` builds that zip content from the repository.
 
 | Guide | Content |
 |---|---|
-| **[User guide](package/docs/EasOAuthMailbox-UserGuide.md)** | What you need to run a test: prerequisites, install, the window and the command line, which scenario to choose, how to read the console, the report and the files produced, and the usual symptoms. |
-| **[Developer guide](package/docs/EasOAuthMailbox-Guide.md)** | For developers, and to go further in troubleshooting: the three sign-in methods with the AD FS, Entra ID and Exchange configuration they expect, every setting, each check with what to verify, the path of the iPhone, the reports and the HTTP trace, troubleshooting, the architecture of the module, the tests and how to evolve the tool. |
+| **[User guide](package/docs/MobileDeviceClient-UserGuide.md)** | What you need to run a test: prerequisites, install, the window and the command line, which scenario to choose, how to read the console, the report and the files produced, and the usual symptoms. |
+| **[Developer guide](package/docs/MobileDeviceClient-Guide.md)** | For developers, and to go further in troubleshooting: the three sign-in methods with the AD FS, Entra ID and Exchange configuration they expect, every setting, each check with what to verify, the path of the iPhone, the reports and the HTTP trace, troubleshooting, the architecture of the module, the tests and how to evolve the tool. |
 
-Both guides also exist as a single HTML file with a light and a dark theme (`package/docs/EasOAuthMailbox-UserGuide.html`, `package/docs/EasOAuthMailbox-Guide.html`): download them and open them locally, or use the copies in the zip of each release.
+Both guides also exist as a single HTML file with a light and a dark theme (`package/docs/MobileDeviceClient-UserGuide.html`, `package/docs/MobileDeviceClient-Guide.html`): download them and open them locally, or use the copies in the zip of each release.
 
 ## Tests
 
@@ -146,7 +148,7 @@ Both guides also exist as a single HTML file with a light and a dark theme (`pac
 .\tools\New-DocumentationImages.ps1          # screenshots of the guides, rendered by the tool itself
 .\tools\Build-Documentation.ps1              # the HTML guides
 .\tools\New-ReadmeImages.ps1                 # the graphics of this page (light and dark)
-.\tools\New-EasOAuthMailboxPackage.ps1       # builds the release zip content from package: run-time files and the HTML guides only
+.\tools\New-MobileDeviceClientPackage.ps1       # builds the release zip content from package: run-time files and the HTML guides only
 ```
 
 ## License

@@ -1,7 +1,13 @@
-# Changelog — EAS OAuth Mailbox
+# Changelog — Mobile Device Client for Exchange
 
 All notable changes are listed here. Versions follow MAJOR.MINOR.PATCH (see the guide, Annex D).
 Author: Nicolas Fabert.
+
+## [2.0.0] — 2026-10-14
+
+### Changed
+- Renamed from *EAS OAuth Mailbox* (`EasOAuthMailbox`) to *Mobile Device Client for Exchange* (`MobileDeviceClient`): the script (`Invoke-MobileDeviceClient.ps1`), the module, the configuration file (`config\MobileDeviceClient.config.psd1`), the report and log prefixes, the package (`MobileDeviceClient-2.0.0`) and the repository. No functional change. The runtime scripts are Authenticode-signed.
+- Migration: copy your settings from `config\EasOAuthMailbox.config.psd1` to `config\MobileDeviceClient.config.psd1`. Report and log files already written keep the old `EasOAuthMailbox_` prefix.
 
 ## [1.2.1] — 2026-10-05
 
