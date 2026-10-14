@@ -2,7 +2,7 @@
 
 <#
 .SYNOPSIS
-    Renders the graphics of the GitHub README from the EAS OAuth Mailbox guide, in a light and a dark
+    Renders the graphics of the GitHub README from the Mobile Device Client for Exchange guide, in a light and a dark
     version: banner, principles, how it works, the iPhone path.
 
 .DESCRIPTION
@@ -12,8 +12,8 @@
     them with <picture>, which picks the light or dark image from the theme of the reader.
 
     Sources:
-      package\docs\EasOAuthMailbox-Guide.md          the cards block of the introduction, the flow of chapter 10.7, the version
-      package\docs\EasOAuthMailbox-Guide.html        the CSS (run tools\Build-Documentation.ps1 first)
+      package\docs\MobileDeviceClient-Guide.md          the cards block of the introduction, the flow of chapter 10.7, the version
+      package\docs\MobileDeviceClient-Guide.html        the CSS (run tools\Build-Documentation.ps1 first)
       tools\Build-Documentation.ps1          the icons
 
     Screenshots: Microsoft Edge in headless mode, with a temporary profile, 2x resolution. Only local files
@@ -30,8 +30,8 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.1  (from Message Trace Report 1.1.0)
-    Part of : EAS OAuth Mailbox (repository tool, not in the package)
+    Version : 2.0.0  (from Message Trace Report 1.1.0)
+    Part of : Mobile Device Client for Exchange (repository tool, not in the package)
 #>
 [CmdletBinding()]
 param(
@@ -54,9 +54,9 @@ function ConvertTo-ReadmeInline([string]$Text) {
 function Get-ReadmeAssets {
     param([string]$Root)
     $builder = Join-Path $Root 'tools\Build-Documentation.ps1'
-    $guideHtml = Join-Path $Root 'package\docs\EasOAuthMailbox-Guide.html'
-    $guideMd = Join-Path $Root 'package\docs\EasOAuthMailbox-Guide.md'
-    if (-not (Test-Path $guideHtml)) { throw 'package\docs\EasOAuthMailbox-Guide.html not found: run tools\Build-Documentation.ps1 first (it holds the CSS of the graphics).' }
+    $guideHtml = Join-Path $Root 'package\docs\MobileDeviceClient-Guide.html'
+    $guideMd = Join-Path $Root 'package\docs\MobileDeviceClient-Guide.md'
+    if (-not (Test-Path $guideHtml)) { throw 'package\docs\MobileDeviceClient-Guide.html not found: run tools\Build-Documentation.ps1 first (it holds the CSS of the graphics).' }
     # Icons: the $Icons table of the documentation builder, read without running the builder.
     $ast = [System.Management.Automation.Language.Parser]::ParseFile($builder, [ref]$null, [ref]$null)
     $assign = $ast.Find({ param($n) $n -is [System.Management.Automation.Language.AssignmentStatementAst] -and $n.Left.Extent.Text -eq '$Icons' }, $true)
@@ -225,7 +225,7 @@ function New-ReadmeGraphic {
 #region Main ---------------------------------------------------------------------------------------
 $edge = @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $edge) { throw 'Microsoft Edge not found: it takes the screenshots (headless mode).' }
-$work = Join-Path ([IO.Path]::GetTempPath()) ('eas-readme-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+$work = Join-Path ([IO.Path]::GetTempPath()) ('mdc-readme-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Path $work, $OutputFolder -Force | Out-Null
 $Script:assets = Get-ReadmeAssets -Root $root
 $iphone = $assets.Flows | Where-Object { ($_.Lines -join ' ') -match 'Autodiscover' } | Select-Object -First 1
@@ -244,7 +244,7 @@ try {
         "<span class=""badge"">$(Get-ReadmeIcon 'tag' 'icon-sm')MIT license</span>"
     ) -join ''
     $banner = "<header class=""hero rb-hero""><div class=""rb-hero-grid""><div>" +
-        "<div class=""hero-top""><div class=""hero-logo"">$(Get-ReadmeIcon 'phone')</div><div><div class=""eyebrow"">Exchange ActiveSync $mid AD FS $mid Entra ID $mid Basic</div><h1>EAS OAuth Mailbox</h1></div></div>" +
+        "<div class=""hero-top""><div class=""hero-logo"">$(Get-ReadmeIcon 'phone')</div><div><div class=""eyebrow"">Exchange ActiveSync $mid AD FS $mid Entra ID $mid Basic</div><h1>Mobile Device Client for Exchange</h1></div></div>" +
         "<p class=""lead"">A <strong>step-by-step diagnostic</strong> of Exchange ActiveSync with modern authentication through AD FS or Entra ID, on-premises or in Exchange Online: it plays the device, <strong>Apple Mail on an iPhone</strong> included, and shows <strong>every request sent and every response received</strong>.</p>" +
         "<div class=""badges"">$badges</div></div>" +
         "<div class=""rb-stats"">" +

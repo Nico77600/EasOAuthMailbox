@@ -1,25 +1,25 @@
 <#
 .SYNOPSIS
-    Renders the screenshots of the guide (package\docs\images\eas-*.png) from the real tool, against the simulated Exchange.
+    Renders the screenshots of the guide (package\docs\images\mdc-*.png) from the real tool, against the simulated Exchange.
 
 .DESCRIPTION
     No lab is needed and the images always match the current code: the console, the window and the report
-    are produced by the module itself, with tests\EasOAuthMailbox.Simulator.ps1 standing in for AD FS and
+    are produced by the module itself, with tests\MobileDeviceClient.Simulator.ps1 standing in for AD FS and
     Exchange (Install-SimExchange replaces only the network calls). Paths and names are anonymised
-    (C:\Tools\EasOAuthMailbox, contoso.test).
+    (C:\Tools\MobileDeviceClient, contoso.test).
 
-        eas-console.png         console of a Full run (banner, the six stages, summary card)
-        eas-console-apple.png   console of an AppleMail run (the path of the Mail app of an iPhone)
-        eas-console-basic.png   console of a Full run with Basic authentication (mailbox without OAuth)
-        eas-console-entra.png   console of a Full run with Entra ID (Exchange on-premises with HMA)
-        eas-console-online.png  console of a Full run with Entra ID against Exchange Online
-        eas-gui.png             the window after a Full run, with its progress box
-        eas-gui-basic.png       the window after a Full run with Basic authentication, dark theme
-        eas-report-overview.png header, tiles and scope of the HTML report
-        eas-report-basic.png    header, tiles and scope of the report of the Basic run
-        eas-report-checks.png   the checks, grouped by stage
-        eas-report-detail.png   the detail dialog of a check (token claims)
-        eas-report-exchange.png a check with the request sent and the response received (HTTP trace)
+        mdc-console.png         console of a Full run (banner, the six stages, summary card)
+        mdc-console-apple.png   console of an AppleMail run (the path of the Mail app of an iPhone)
+        mdc-console-basic.png   console of a Full run with Basic authentication (mailbox without OAuth)
+        mdc-console-entra.png   console of a Full run with Entra ID (Exchange on-premises with HMA)
+        mdc-console-online.png  console of a Full run with Entra ID against Exchange Online
+        mdc-gui.png             the window after a Full run, with its progress box
+        mdc-gui-basic.png       the window after a Full run with Basic authentication, dark theme
+        mdc-report-overview.png header, tiles and scope of the HTML report
+        mdc-report-basic.png    header, tiles and scope of the report of the Basic run
+        mdc-report-checks.png   the checks, grouped by stage
+        mdc-report-detail.png   the detail dialog of a check (token claims)
+        mdc-report-exchange.png a check with the request sent and the response received (HTTP trace)
 
     The HTML pages are captured with Microsoft Edge (headless), the window with RenderTargetBitmap (WPF).
     Run tools\Build-Documentation.ps1 afterwards: the guide embeds the images.
@@ -32,8 +32,8 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.1
-    Part of : EAS OAuth Mailbox (repository tool, not in the package)
+    Version : 2.0.0
+    Part of : Mobile Device Client for Exchange (repository tool, not in the package)
 #>
 #Requires -Version 7.4
 [CmdletBinding()]
@@ -46,9 +46,9 @@ $root = Split-Path $PSScriptRoot -Parent
 if (-not $OutputFolder) { $OutputFolder = Join-Path $root 'package\docs\images' }
 $edge = @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $edge) { throw 'Microsoft Edge not found: it takes the screenshots (headless mode).' }
-$work = Join-Path ([IO.Path]::GetTempPath()) ('eom-doc-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+$work = Join-Path ([IO.Path]::GetTempPath()) ('mdc-doc-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Path $work, $OutputFolder -Force | Out-Null
-$shown = 'C:\Tools\EasOAuthMailbox'
+$shown = 'C:\Tools\MobileDeviceClient'
 
 #region Edge helpers (same as Exchange Log Report) -----------------------------------------------
 function Save-Screenshot([string]$Html, [string]$Png, [int]$Width, [int]$Height) {
@@ -90,12 +90,12 @@ function Save-Page([string]$Html, [string]$Name, [int]$Width, [int]$Height = 0) 
 
 #region Run the real tool against the simulated Exchange ----------------------------------------
 # Console theme is chosen when the module loads: colours and emoji, as in Windows Terminal.
-$env:EOM_FORCE_COLOR = '1'
-$env:EOM_ICONS = 'Emoji'
-Remove-Module EasOAuthMailbox -ErrorAction SilentlyContinue
-Import-Module (Join-Path $root 'package\EasOAuthMailbox.psd1') -Force
-$module = Get-Module EasOAuthMailbox
-. (Join-Path $root 'tests\EasOAuthMailbox.Simulator.ps1')
+$env:MDC_FORCE_COLOR = '1'
+$env:MDC_ICONS = 'Emoji'
+Remove-Module MobileDeviceClient -ErrorAction SilentlyContinue
+Import-Module (Join-Path $root 'package\MobileDeviceClient.psd1') -Force
+$module = Get-Module MobileDeviceClient
+. (Join-Path $root 'tests\MobileDeviceClient.Simulator.ps1')
 
 $state = New-SimState
 $state.RequireProvisioning = $true
@@ -124,7 +124,7 @@ $state.Messages = @(
 )
 Install-SimExchange -Module $module -State $state
 
-$settings = Import-EomConfiguration
+$settings = Import-MdcConfiguration
 $settings.DeviceId = 'B7E21C9A4F6D3E8A1C5B9D2F7A4E6C30'
 $settings.AcknowledgePolicy = $true
 $settings.TestType = 'Full'
@@ -134,12 +134,12 @@ $displayed.OutputPath = "$shown\reports"
 
 Write-Host 'Console run (simulated Exchange)...'
 $records = & {
-    Write-EomRunBanner -Settings $displayed -LogPath "$shown\logs\EasOAuthMailbox_20261002.log"
-    $script:DocResult = Invoke-EomMailboxTest -Configuration $settings -TestType Full
-    Write-EomRunSummary -Result $script:DocResult -ReportText "$shown\reports\EasOAuthMailbox_Full_20261002-150412\EasOAuthMailbox.html" -LogPath "$shown\logs\EasOAuthMailbox_20261002.log"
+    Write-MdcRunBanner -Settings $displayed -LogPath "$shown\logs\MobileDeviceClient_20261002.log"
+    $script:DocResult = Invoke-MdcMailboxTest -Configuration $settings -TestType Full
+    Write-MdcRunSummary -Result $script:DocResult -ReportText "$shown\reports\MobileDeviceClient_Full_20261002-150412\MobileDeviceClient.html" -LogPath "$shown\logs\MobileDeviceClient_20261002.log"
 } 6>&1
 $result = $script:DocResult
-$report = Export-EomReport -Result $result -OutputPath $settings.OutputPath
+$report = Export-MdcReport -Result $result -OutputPath $settings.OutputPath
 Write-Host "  result: $($result.Status), $($result.Steps.Count) checks"
 #endregion
 
@@ -199,7 +199,7 @@ $body</pre></div>
 }
 
 Write-Host 'Images:'
-Save-Console $records '.\Invoke-EasOAuthMailbox.ps1 -TestType Full -AcknowledgePolicy' 'eas-console'
+Save-Console $records '.\Invoke-MobileDeviceClient.ps1 -TestType Full -AcknowledgePolicy' 'mdc-console'
 
 # AppleMail: the same simulated Exchange, seen by the Mail app of an iPhone (token of the Apple client).
 $appleState = New-SimState
@@ -216,12 +216,12 @@ $appleSettings.DeviceId = ''
 $appleDisplayed = $appleSettings.Clone()
 $appleDisplayed.OutputPath = "$shown\reports"
 $appleRecords = & {
-    Write-EomRunBanner -Settings $appleDisplayed -LogPath "$shown\logs\EasOAuthMailbox_20261002.log"
-    $script:AppleResult = Invoke-EomMailboxTest -Configuration $appleSettings -TestType AppleMail
-    Write-EomRunSummary -Result $script:AppleResult -ReportText "$shown\reports\EasOAuthMailbox_AppleMail_20261002-151208\EasOAuthMailbox.html" -LogPath "$shown\logs\EasOAuthMailbox_20261002.log"
+    Write-MdcRunBanner -Settings $appleDisplayed -LogPath "$shown\logs\MobileDeviceClient_20261002.log"
+    $script:AppleResult = Invoke-MdcMailboxTest -Configuration $appleSettings -TestType AppleMail
+    Write-MdcRunSummary -Result $script:AppleResult -ReportText "$shown\reports\MobileDeviceClient_AppleMail_20261002-151208\MobileDeviceClient.html" -LogPath "$shown\logs\MobileDeviceClient_20261002.log"
 } 6>&1
 Write-Host "  AppleMail result: $($script:AppleResult.Status), $($script:AppleResult.Steps.Count) checks"
-Save-Console $appleRecords '.\Invoke-EasOAuthMailbox.ps1 -TestType AppleMail -AcknowledgePolicy' 'eas-console-apple'
+Save-Console $appleRecords '.\Invoke-MobileDeviceClient.ps1 -TestType AppleMail -AcknowledgePolicy' 'mdc-console-apple'
 
 # Basic: a mailbox without OAuth (legacy user); the password is typed at the prompt of Get-Credential.
 $basicState = New-SimState
@@ -241,18 +241,18 @@ $basicDisplayed.OutputPath = "$shown\reports"
 $basicUser = [string]$basicSettings.Mailbox
 $basicCredential = [pscredential]::new($basicUser, (ConvertTo-SecureString $basicState.BasicUsers[$basicUser] -AsPlainText -Force))
 $basicRecords = & {
-    Write-EomRunBanner -Settings $basicDisplayed -LogPath "$shown\logs\EasOAuthMailbox_20261002.log"
-    Write-EomItem Info "Basic authentication: password of $basicUser (UPN or DOMAIN\user), sent with every request and never written." -Icon Key
+    Write-MdcRunBanner -Settings $basicDisplayed -LogPath "$shown\logs\MobileDeviceClient_20261002.log"
+    Write-MdcItem Info "Basic authentication: password of $basicUser (UPN or DOMAIN\user), sent with every request and never written." -Icon Key
     Write-Host ''
     Write-Host 'PowerShell credential request'
-    Write-Host "EAS OAuth Mailbox - Basic authentication for $basicUser"
+    Write-Host "Mobile Device Client for Exchange - Basic authentication for $basicUser"
     Write-Host "Password for user $($basicUser): *************"
-    $script:BasicResult = Invoke-EomMailboxTest -Configuration $basicSettings -TestType Full -Credential $basicCredential
-    Write-EomRunSummary -Result $script:BasicResult -ReportText "$shown\reports\EasOAuthMailbox_Full_20261002-152031\EasOAuthMailbox.html" -LogPath "$shown\logs\EasOAuthMailbox_20261002.log"
+    $script:BasicResult = Invoke-MdcMailboxTest -Configuration $basicSettings -TestType Full -Credential $basicCredential
+    Write-MdcRunSummary -Result $script:BasicResult -ReportText "$shown\reports\MobileDeviceClient_Full_20261002-152031\MobileDeviceClient.html" -LogPath "$shown\logs\MobileDeviceClient_20261002.log"
 } 6>&1
 Write-Host "  Basic result: $($script:BasicResult.Status), $($script:BasicResult.Steps.Count) checks"
-Save-Console $basicRecords '.\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authentication Basic -AcknowledgePolicy' 'eas-console-basic'
-$basicReport = Export-EomReport -Result $script:BasicResult -OutputPath (Join-Path $work 'reports-basic')
+Save-Console $basicRecords '.\Invoke-MobileDeviceClient.ps1 -TestType Full -Authentication Basic -AcknowledgePolicy' 'mdc-console-basic'
+$basicReport = Export-MdcReport -Result $script:BasicResult -OutputPath (Join-Path $work 'reports-basic')
 
 # Hybrid modern authentication: Exchange sends the clients to Entra ID (tenant of the simulated organisation).
 $entraState = New-SimState
@@ -272,12 +272,12 @@ $entraSettings.TestType = 'Full'
 $entraDisplayed = $entraSettings.Clone()
 $entraDisplayed.OutputPath = "$shown\reports"
 $entraRecords = & {
-    Write-EomRunBanner -Settings $entraDisplayed -LogPath "$shown\logs\EasOAuthMailbox_20261003.log"
-    $script:EntraResult = Invoke-EomMailboxTest -Configuration $entraSettings -TestType Full
-    Write-EomRunSummary -Result $script:EntraResult -ReportText "$shown\reports\EasOAuthMailbox_Full_20261003-201846\EasOAuthMailbox.html" -LogPath "$shown\logs\EasOAuthMailbox_20261003.log"
+    Write-MdcRunBanner -Settings $entraDisplayed -LogPath "$shown\logs\MobileDeviceClient_20261003.log"
+    $script:EntraResult = Invoke-MdcMailboxTest -Configuration $entraSettings -TestType Full
+    Write-MdcRunSummary -Result $script:EntraResult -ReportText "$shown\reports\MobileDeviceClient_Full_20261003-201846\MobileDeviceClient.html" -LogPath "$shown\logs\MobileDeviceClient_20261003.log"
 } 6>&1
 Write-Host "  Entra ID result: $($script:EntraResult.Status), $($script:EntraResult.Steps.Count) checks"
-Save-Console $entraRecords '.\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authority EntraID -AcknowledgePolicy' 'eas-console-entra'
+Save-Console $entraRecords '.\Invoke-MobileDeviceClient.ps1 -TestType Full -Authority EntraID -AcknowledgePolicy' 'mdc-console-entra'
 
 # Exchange Online: the same Entra ID sign-in, the URL of Exchange Online, ActiveSync 16.1 only.
 $onlineUrl = 'https://outlook.office365.com/Microsoft-Server-ActiveSync'
@@ -292,12 +292,12 @@ $onlineSettings.EasUrl = $onlineUrl
 $onlineDisplayed = $onlineSettings.Clone()
 $onlineDisplayed.OutputPath = "$shown\reports"
 $onlineRecords = & {
-    Write-EomRunBanner -Settings $onlineDisplayed -LogPath "$shown\logs\EasOAuthMailbox_20261005.log"
-    $script:OnlineResult = Invoke-EomMailboxTest -Configuration $onlineSettings -TestType Full
-    Write-EomRunSummary -Result $script:OnlineResult -ReportText "$shown\reports\EasOAuthMailbox_Full_20261005-153307\EasOAuthMailbox.html" -LogPath "$shown\logs\EasOAuthMailbox_20261005.log"
+    Write-MdcRunBanner -Settings $onlineDisplayed -LogPath "$shown\logs\MobileDeviceClient_20261005.log"
+    $script:OnlineResult = Invoke-MdcMailboxTest -Configuration $onlineSettings -TestType Full
+    Write-MdcRunSummary -Result $script:OnlineResult -ReportText "$shown\reports\MobileDeviceClient_Full_20261005-153307\MobileDeviceClient.html" -LogPath "$shown\logs\MobileDeviceClient_20261005.log"
 } 6>&1
 Write-Host "  Exchange Online result: $($script:OnlineResult.Status), $($script:OnlineResult.Steps.Count) checks"
-Save-Console $onlineRecords ".\Invoke-EasOAuthMailbox.ps1 -TestType Full -Authority EntraID -EasUrl $onlineUrl -AcknowledgePolicy" 'eas-console-online'
+Save-Console $onlineRecords ".\Invoke-MobileDeviceClient.ps1 -TestType Full -Authority EntraID -EasUrl $onlineUrl -AcknowledgePolicy" 'mdc-console-online'
 Install-SimExchange -Module $module -State $state
 #endregion
 
@@ -313,17 +313,17 @@ function Save-ReportView([string]$Name, [string]$Css, [string]$Script, [int]$Hei
     [IO.File]::WriteAllText($page, $Html.Replace('</body>', $inject), [Text.UTF8Encoding]::new($false))
     Save-Page $page $Name 1280 $Height
 }
-Save-ReportView 'eas-report-overview' 'section.block:nth-of-type(n+2), footer { display:none !important; } body { padding-bottom:8px; }' ''
-Save-ReportView 'eas-report-basic' 'section.block:nth-of-type(n+2), footer { display:none !important; } body { padding-bottom:8px; }' '' -Html $basicHtml
-Save-ReportView 'eas-report-checks' 'header, section.block:nth-of-type(1), section.block:nth-of-type(n+3), footer { display:none !important; } body { padding-top:20px; padding-bottom:8px; }' ''
-Save-ReportView 'eas-report-detail' 'body { min-height:820px; }' "Array.from(document.querySelectorAll('.timeline > li')).find(li => li.querySelector('.what').textContent === 'Token claims').click()" 820
-Save-ReportView 'eas-report-exchange' 'body { min-height:980px; } dialog { max-height:none; } .dialog-body { max-height:none; }' "Array.from(document.querySelectorAll('.timeline > li')).find(li => li.querySelector('.what').textContent === 'OAuth for the mailbox').click()" 980
+Save-ReportView 'mdc-report-overview' 'section.block:nth-of-type(n+2), footer { display:none !important; } body { padding-bottom:8px; }' ''
+Save-ReportView 'mdc-report-basic' 'section.block:nth-of-type(n+2), footer { display:none !important; } body { padding-bottom:8px; }' '' -Html $basicHtml
+Save-ReportView 'mdc-report-checks' 'header, section.block:nth-of-type(1), section.block:nth-of-type(n+3), footer { display:none !important; } body { padding-top:20px; padding-bottom:8px; }' ''
+Save-ReportView 'mdc-report-detail' 'body { min-height:820px; }' "Array.from(document.querySelectorAll('.timeline > li')).find(li => li.querySelector('.what').textContent === 'Token claims').click()" 820
+Save-ReportView 'mdc-report-exchange' 'body { min-height:980px; } dialog { max-height:none; } .dialog-body { max-height:none; }' "Array.from(document.querySelectorAll('.timeline > li')).find(li => li.querySelector('.what').textContent === 'OAuth for the mailbox').click()" 980
 #endregion
 
 #region Window image -----------------------------------------------------------------------------
 Write-Host 'Window run (simulated Exchange)...'
 function Save-Window([hashtable]$Configuration, [string]$Name, [string]$Password, [string]$Theme = 'Light') {
-    $window = New-EomTestForm -Configuration $Configuration -Theme $Theme
+    $window = New-MdcTestForm -Configuration $Configuration -Theme $Theme
     $form = $window.Form
     # Off screen, at its design size (the work area of this computer does not matter for the image).
     $form.WindowStartupLocation = 'Manual'
@@ -331,7 +331,7 @@ function Save-Window([hashtable]$Configuration, [string]$Name, [string]$Password
     $form.ShowActivated = $false; $form.ShowInTaskbar = $false
     $form.Show()
     if ($Password) { $window.Controls.BasicPassword.Password = $Password }
-    & $module { Invoke-EomGuiRun } 6>$null
+    & $module { Invoke-MdcGuiRun } 6>$null
     # Anonymised paths in the progress and the footer.
     for ($i = 0; $i -lt $window.Items.Count; $i++) {
         $item = $window.Items[$i]
@@ -339,7 +339,7 @@ function Save-Window([hashtable]$Configuration, [string]$Name, [string]$Password
     }
     $window.Controls.Footer.Text = $window.Controls.Footer.Text.Replace($Configuration.OutputPath, "$shown\reports")
     $window.Controls.LogScroll.ScrollToHome()
-    & $module { Invoke-EomGuiPump }
+    & $module { Invoke-MdcGuiPump }
     $form.UpdateLayout()
     $root = $form.Content
     $bitmap = [Windows.Media.Imaging.RenderTargetBitmap]::new([int][Math]::Ceiling($root.ActualWidth), [int][Math]::Ceiling($root.ActualHeight), 96, 96, [Windows.Media.PixelFormats]::Pbgra32)
@@ -351,11 +351,11 @@ function Save-Window([hashtable]$Configuration, [string]$Name, [string]$Password
     Write-Host ("  {0,-26} {1} x {2} ({3})" -f "$Name.png", $bitmap.PixelWidth, $bitmap.PixelHeight, $Theme)
     $form.Close()
 }
-Save-Window $settings.Clone() 'eas-gui'
+Save-Window $settings.Clone() 'mdc-gui'
 Install-SimExchange -Module $module -State $basicState
-Save-Window $basicSettings.Clone() 'eas-gui-basic' $basicState.BasicUsers[$basicUser] -Theme Dark
+Save-Window $basicSettings.Clone() 'mdc-gui-basic' $basicState.BasicUsers[$basicUser] -Theme Dark
 #endregion
 
-Remove-Module EasOAuthMailbox -Force
-Remove-Item Env:\EOM_FORCE_COLOR, Env:\EOM_ICONS -ErrorAction SilentlyContinue
+Remove-Module MobileDeviceClient -Force
+Remove-Item Env:\MDC_FORCE_COLOR, Env:\MDC_ICONS -ErrorAction SilentlyContinue
 if ($KeepWork) { Write-Host "Work folder: $work" } else { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }

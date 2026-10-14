@@ -5,7 +5,7 @@ param()
 $ErrorActionPreference = 'Stop'
 Import-Module Pester -MinimumVersion 6.1.0
 $configuration = New-PesterConfiguration
-$configuration.Run.Path = Join-Path $PSScriptRoot 'tests\EasOAuthMailbox.Tests.ps1'
+$configuration.Run.Path = Join-Path $PSScriptRoot 'tests\MobileDeviceClient.Tests.ps1'
 $configuration.Run.PassThru = $true
 $configuration.Output.Verbosity = 'Normal'
 $configuration.TestDrive.Enabled = $false

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Builds package\docs\EasOAuthMailbox-UserGuide.html and package\docs\EasOAuthMailbox-Guide.html
+    Builds package\docs\MobileDeviceClient-UserGuide.html and package\docs\MobileDeviceClient-Guide.html
     from their Markdown sources.
 
 .DESCRIPTION
@@ -29,7 +29,7 @@
 
 .NOTES
     Author  : Nicolas Fabert
-    Version : 1.2.1
+    Version : 2.0.0
     PowerShell pitfall: never name a variable $matches — every -match overwrites the automatic
     $Matches, and variable names are case-insensitive.
 #>
@@ -41,7 +41,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (-not $Source) {
-    foreach ($name in 'EasOAuthMailbox-UserGuide', 'EasOAuthMailbox-Guide') {
+    foreach ($name in 'MobileDeviceClient-UserGuide', 'MobileDeviceClient-Guide') {
         & $PSCommandPath -Source (Join-Path $PSScriptRoot "..\package\docs\$name.md")
     }
     return

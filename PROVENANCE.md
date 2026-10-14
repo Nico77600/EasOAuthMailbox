@@ -1,6 +1,6 @@
 # Public provenance declaration
 
-- Repository: https://github.com/Nico77600/EasOAuthMailbox
+- Repository: https://github.com/Nico77600/MobileDeviceClient
 - Default branch: `main`
 - Audited revision: `4f3d0d1ce4d8b9dcb058abd9a9036cb3a8591ebe`
 - Audit date: 2026-10-07
